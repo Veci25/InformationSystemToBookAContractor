@@ -1,24 +1,42 @@
 const express = require('express');
-const cors = require('cors');
-const bodyParser = require('body-parser');
+const app = express();
+//const cors = require('cors');
+//const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
 dotenv.config();
 
-const app = express();
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 8190;
+const db = require('./config/db'); 
 
-// Middleware
-app.use(cors());
-app.use(bodyParser.json());
-
-// Routes
 const authRoutes = require('./routes/auth');
-app.use('/api/auth', authRoutes);
+const userRoutes = require('./routes/users');
+// ==== Middleware ====
+//app.use(cors());
+//app.use(bodyParser.json());
+
+// ==== Routes ====
 
 app.get('/', (req, res) => {
   res.send('Contractor Booking System API Running!');
 });
 
+// Auth routes
+app.use('/api/auth', authRoutes);
+
+
+
+// ==== Test DB Route ====
+app.get('/api/test-db', async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT 1 + 1 AS result');
+    res.json({ dbConnected: true, result: rows[0].result });
+  } catch (error) {
+    console.error('Database connection failed:', error);
+    res.status(500).json({ dbConnected: false, error: error.message });
+  }
+});
+
+// ==== Start Server ====
 app.listen(port, () => {
   console.log(`🚀 Server running at http://localhost:${port}`);
 });
