@@ -2,8 +2,7 @@ const db = require('../config/db');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
-// 🔐 Secret key (for now, hardcoded)
-const JWT_SECRET = 'mysecretkey';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 exports.register = (req, res) => {
   const { username, email, password, name, surname, role } = req.body;
