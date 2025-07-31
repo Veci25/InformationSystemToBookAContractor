@@ -1,29 +1,21 @@
+
 const express = require('express');
 const app = express();
 //const cors = require('cors');
-//const bodyParser = require('body-parser');
+const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
 dotenv.config();
 
 const port = process.env.PORT || 8190;
-const db = require('./config/db'); 
 
 const authRoutes = require('./routes/auth');
-const userRoutes = require('./routes/users');
+
 // ==== Middleware ====
 //app.use(cors());
-//app.use(bodyParser.json());
+app.use(bodyParser.json());
 
 // ==== Routes ====
-
-app.get('/', (req, res) => {
-  res.send('Contractor Booking System API Running!');
-});
-
-// Auth routes
 app.use('/api/auth', authRoutes);
-
-
 
 // ==== Test DB Route ====
 app.get('/api/test-db', async (req, res) => {
@@ -38,5 +30,5 @@ app.get('/api/test-db', async (req, res) => {
 
 // ==== Start Server ====
 app.listen(port, () => {
-  console.log(`🚀 Server running at http://localhost:${port}`);
+  console.log(`Server running at http://localhost:${port}`);
 });
