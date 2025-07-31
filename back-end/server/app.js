@@ -2,11 +2,13 @@
 const express = require('express');
 const app = express();
 //const cors = require('cors');
+
 const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
 dotenv.config();
 
 const port = process.env.PORT || 8190;
+
 const authRoutes = require('./routes/auth');
 const db = require('./config/db'); // now using promise-based pool from db.js
 
@@ -19,6 +21,7 @@ app.use(bodyParser.json());
 app.get('/', (req, res) => {
   res.send('Contractor Booking System API Running!');
 });
+
 
 app.use('/api/auth', authRoutes);
 
