@@ -1,27 +1,26 @@
-const db = require('../config/db');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-exports.register = (req, res) => {
-  const { username, email, password, name, surname, role } = req.body;
+exports.register = async (req, res) => {
+  try {
+    const { username, email, password, name, surname, role } = req.body;
 
-  if (!username || !email || !password || !role) {
-    return res.status(400).json({ message: 'Missing required fields' });
-  }
-
-  // Hash the password
-  const hashedPassword = bcrypt.hashSync(password, 10);
-
-  const sql = `INSERT INTO users (username, email, password, name, surname, role) VALUES (?, ?, ?, ?, ?, ?)`;
-  db.query(sql, [username, email, hashedPassword, name, surname, role], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ message: 'Registration failed' });
+    if (!username || !email || !password || !role) {
+      return res.status(400).json({ message: 'Missing required fields' });
     }
-    res.status(201).json({ message: 'User registered successfully' });
-  });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const sql = `INSERT INTO users (username, email, password, name, surname, role) VALUES (?, ?, ?, ?, ?, ?)`;
+    await db.query(sql, [username, email, hashedPassword, name, surname, role]);
+
+    return res.status(201).json({ message: 'User registered successfully' });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Registration failed', error: error.message });
+  }
 };
 
 exports.login = (req, res) => {
