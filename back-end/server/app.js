@@ -8,6 +8,7 @@ dotenv.config();
 
 const port = process.env.PORT || 8190;
 const authRoutes = require('./routes/auth');
+const userRoutes = require('./routes/users');
 const db = require('./config/db'); // now using promise-based pool from db.js
 
 // ==== Middleware ====
