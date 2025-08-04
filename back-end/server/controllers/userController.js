@@ -51,22 +51,27 @@ exports.updateUser = async (req, res) => {
   }
 };
 
-exports.createUser = async (req, res) => {
-  const { username, email, password, name, surname, role } = req.body;
-  if (!username || !email || !password || !role) {
-    return res.status(400).json({ message: 'Missing required fields' });
-  }
+exports.updateUser = async (req, res) => {
+  const { id } = req.params;
+  const { name, surname, email } = req.body;
+
   try {
-    await db.query(
-      'INSERT INTO users (username, email, password, name, surname, role) VALUES (?, ?, ?, ?, ?, ?)',
-      [username, email, password, name, surname, role]
+    const [result] = await db.query(
+      'UPDATE users SET name=?, surname=?, email=? WHERE user_id=?',
+      [name, surname, email, id]
     );
-    res.status(201).json({ message: 'User created successfully' });
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({ message: 'User updated successfully' });
   } catch (error) {
-    console.error('Error creating user:', error);
+    console.error(error);
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 // Delete user
 exports.deleteUser = async (req, res) => {
