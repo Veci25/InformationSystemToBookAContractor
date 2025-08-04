@@ -1,3 +1,4 @@
+// db.js
 const mysql = require('mysql2');
 
 const db = mysql.createConnection({
@@ -6,6 +7,7 @@ const db = mysql.createConnection({
   password: process.env.DB_PASS,
   database: process.env.DB_NAME
 }).promise();
+
 
 db.connect((err) => {
   if (err) {
