@@ -21,6 +21,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 
 // ==== Test DB Route ====
 app.get('/api/test-db', async (req, res) => {
