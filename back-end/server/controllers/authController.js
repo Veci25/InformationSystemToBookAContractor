@@ -1,3 +1,4 @@
+const db = require('../config/db');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
@@ -23,19 +24,26 @@ exports.register = async (req, res) => {
   }
 };
 
-exports.login = (req, res) => {
-  const { username, password } = req.body;
+exports.login = async (req, res) => {
+  try {
+    console.log("Login endpoint hit, body:", req.body);
+    const { username, password } = req.body;
 
-  const sql = `SELECT * FROM users WHERE username = ?`;
-  db.query(sql, [username], (err, results) => {
-    if (err) return res.status(500).json({ message: 'Login error' });
+    const [results] = await db.query('SELECT * FROM users WHERE username = ?', [username]);
+    console.log("DB results:", results);
+
     if (results.length === 0) return res.status(404).json({ message: 'User not found' });
 
     const user = results[0];
-    const isMatch = bcrypt.compareSync(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ message: 'Invalid password' });
 
-    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign({ id: user.user_id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    console.log("Token generated");
     res.json({ message: 'Login successful', token });
-  });
+
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ message: 'Server error' });
+  }
 };
