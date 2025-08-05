@@ -49,10 +49,15 @@ exports.updateJobPost = async (req, res) => {
     const { id } = req.params;
     const { job_title, job_description, job_price, job_deadline } = req.body;
 
-    await db.query(
+    const [result] = await db.query(
       'UPDATE job_posts SET job_title=?, job_description=?, job_price=?, job_deadline=? WHERE job_post_id=?',
       [job_title, job_description, job_price, job_deadline, id]
     );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Job post not found' });
+    }
+
     res.json({ message: 'Job post updated successfully' });
   } catch (error) {
     console.error(error);
