@@ -69,10 +69,17 @@ exports.updateJobPost = async (req, res) => {
 exports.deleteJobPost = async (req, res) => {
   try {
     const { id } = req.params;
-    await db.query('DELETE FROM job_posts WHERE job_post_id=?', [id]);
+
+    const [result] = await db.query('DELETE FROM job_posts WHERE job_post_id=?', [id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Job post not found' });
+    }
+
     res.json({ message: 'Job post deleted successfully' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
   }
 };
+
