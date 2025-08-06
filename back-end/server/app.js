@@ -13,6 +13,7 @@ const userRoutes = require('./routes/users');
 const jobPostRoutes = require('./routes/jobPosts'); 
 const bookingRoutes = require('./routes/bookings');
 const skillRoutes = require('./routes/skills');
+const ratingRoutes = require('./routes/ratings'); 
 const db = require('./config/db'); 
 
 // ==== Middleware ====
@@ -25,6 +26,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/job-posts', jobPostRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/skills', skillRoutes);
+app.use('/api/ratings', ratingRoutes);
 
 // ==== Test DB Route ====
 app.get('/api/test-db', async (req, res) => {
