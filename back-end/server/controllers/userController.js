@@ -1,8 +1,9 @@
 const db = require('../config/db');
+const { validateUserData, validateUpdateUserData } = require('../validations/userValidations');
 
 exports.getAllUsers = async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT user_id, name, email, role FROM users');
+    const [rows] = await db.query('SELECT user_id, name, surname, email, role, age FROM users');
     res.json(rows);
   } catch (error) {
     console.error(error);
@@ -13,7 +14,7 @@ exports.getAllUsers = async (req, res) => {
 exports.getUserById = async (req, res) => {
   const { id } = req.params;
   try {
-    const [rows] = await db.query('SELECT user_id, name, email, role FROM users WHERE user_id = ?', [id]);
+    const [rows] = await db.query('SELECT user_id, name, surname, email, role, age FROM users WHERE user_id = ?', [id]);
     if (rows.length === 0) return res.status(404).json({ message: 'User not found' });
     res.json(rows[0]);
   } catch (error) {
@@ -26,7 +27,7 @@ exports.getCurrentUser = async (req, res) => {
   try {
     const userId = req.user.id; // comes from JWT middleware
     const [rows] = await db.query(
-      'SELECT user_id, username, name, email, role FROM users WHERE user_id = ?',
+      'SELECT user_id, username, name, surname, email, role, age FROM users WHERE user_id = ?',
       [userId]
     );
     if (rows.length === 0) {
@@ -41,12 +42,15 @@ exports.getCurrentUser = async (req, res) => {
 
 exports.updateUser = async (req, res) => {
   const { id } = req.params;
-  const { name, surname, email } = req.body;
+  const { name, surname, email, age } = req.body;
+
+  const error = validateUpdateUserData({ email });
+  if (error) return res.status(400).json({ message: error });
 
   try {
     const [result] = await db.query(
-      'UPDATE users SET name=?, surname=?, email=? WHERE user_id=?',
-      [name, surname, email, id]
+      'UPDATE users SET name=?, surname=?, email=?, age=? WHERE user_id=?',
+      [name, surname, email, age, id]
     );
 
     if (result.affectedRows === 0) {
@@ -61,14 +65,18 @@ exports.updateUser = async (req, res) => {
 };
 
 exports.createUser = async (req, res) => {
-  const { username, email, password, name, surname, role } = req.body;
+  const { username, email, password, name, surname, role, age } = req.body;
   if (!username || !email || !password || !role) {
     return res.status(400).json({ message: 'Missing required fields' });
   }
+
+  const error = validateUserData({ username, email, password, role });
+  if (error) return res.status(400).json({ message: error });
+
   try {
     await db.query(
-      'INSERT INTO users (username, email, password, name, surname, role) VALUES (?, ?, ?, ?, ?, ?)',
-      [username, email, password, name, surname, role]
+      'INSERT INTO users (username, email, password, name, surname, role, age) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [username, email, password, name, surname, role, age]
     );
     res.status(201).json({ message: 'User created successfully' });
   } catch (error) {
@@ -100,6 +108,3 @@ exports.deleteUser = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
-
-
-
