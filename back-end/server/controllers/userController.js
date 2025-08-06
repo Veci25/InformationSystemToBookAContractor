@@ -1,5 +1,5 @@
 const db = require('../config/db');
-const { validateUserData, validateUpdateUserData } = require('../validations/userValidations');
+const { validateUserData, validateUpdateUserData } = require('../validations/userValidation');
 
 exports.getAllUsers = async (req, res) => {
   try {
