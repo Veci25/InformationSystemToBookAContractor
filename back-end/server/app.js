@@ -11,7 +11,8 @@ const port = process.env.PORT || 8190;
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const jobPostRoutes = require('./routes/jobPosts'); 
-const db = require('./config/db'); // now using promise-based pool from db.js
+const bookingRoutes = require('./routes/bookings');
+const db = require('./config/db'); 
 
 // ==== Middleware ====
 //app.use(cors());
@@ -21,6 +22,7 @@ app.use(bodyParser.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/job-posts', jobPostRoutes);
+app.use('/api/bookings', bookingRoutes);
 
 // ==== Test DB Route ====
 app.get('/api/test-db', async (req, res) => {
