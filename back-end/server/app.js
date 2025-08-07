@@ -14,6 +14,7 @@ const jobPostRoutes = require('./routes/jobPosts');
 const bookingRoutes = require('./routes/bookings');
 const skillRoutes = require('./routes/skills');
 const ratingRoutes = require('./routes/ratings'); 
+const photoRoutes = require('./routes/photos');
 const db = require('./config/db'); 
 
 // ==== Middleware ====
@@ -27,6 +28,7 @@ app.use('/api/job-posts', jobPostRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/skills', skillRoutes);
 app.use('/api/ratings', ratingRoutes);
+app.use('/api/photos', photoRoutes);
 
 // ==== Test DB Route ====
 app.get('/api/test-db', async (req, res) => {
