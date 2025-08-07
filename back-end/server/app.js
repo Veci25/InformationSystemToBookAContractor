@@ -1,7 +1,6 @@
-
 const express = require('express');
 const app = express();
-//const cors = require('cors');
+const cors = require('cors');
 const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
 dotenv.config();
@@ -17,11 +16,10 @@ const ratingRoutes = require('./routes/ratings');
 const photoRoutes = require('./routes/photos');
 const db = require('./config/db'); 
 
-// ==== Middleware ====
-//app.use(cors());
+app.use(cors());
 app.use(bodyParser.json());
 
-// ==== Routes ====
+//Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/job-posts', jobPostRoutes);
@@ -30,7 +28,7 @@ app.use('/api/skills', skillRoutes);
 app.use('/api/ratings', ratingRoutes);
 app.use('/api/photos', photoRoutes);
 
-// ==== Test DB Route ====
+//Test DB Route 
 app.get('/api/test-db', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT 1 + 1 AS result');
@@ -41,7 +39,7 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
-// ==== Start Server ====
+//Start Server
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });

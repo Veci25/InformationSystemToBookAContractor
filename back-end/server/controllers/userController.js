@@ -1,5 +1,7 @@
 const db = require('../config/db');
 const { validateUserData, validateUpdateUserData } = require('../validations/userValidation');
+const bcrypt = require('bcrypt');
+
 
 exports.getAllUsers = async (req, res) => {
   try {
@@ -25,7 +27,7 @@ exports.getUserById = async (req, res) => {
 
 exports.getCurrentUser = async (req, res) => {
   try {
-    const userId = req.user.id; // comes from JWT middleware
+    const userId = req.user.id; 
     const [rows] = await db.query(
       'SELECT user_id, username, name, surname, email, role, age FROM users WHERE user_id = ?',
       [userId]
@@ -74,10 +76,14 @@ exports.createUser = async (req, res) => {
   if (error) return res.status(400).json({ message: error });
 
   try {
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
     await db.query(
       'INSERT INTO users (username, email, password, name, surname, role, age) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [username, email, password, name, surname, role, age]
+      [username, email, hashedPassword, name, surname, role, age]
     );
+
     res.status(201).json({ message: 'User created successfully' });
   } catch (error) {
     console.error('Error creating user:', error);
@@ -85,14 +91,13 @@ exports.createUser = async (req, res) => {
   }
 };
 
-// Delete user
 exports.deleteUser = async (req, res) => {
-  const userIdToDelete = parseInt(req.params.id, 10); // id from URL
-  const requesterId = req.user.id; // id from JWT
-  const requesterRole = req.user.role; // role from JWT
+  const userIdToDelete = parseInt(req.params.id, 10);
+  const requesterId = req.user.id; 
+  const requesterRole = req.user.role;
 
   try {
-    // If requester is not admin and tries to delete someone else
+
     if (requesterRole !== 'admin' && requesterId !== userIdToDelete) {
       return res.status(403).json({ message: 'You can only delete your own account' });
     }
