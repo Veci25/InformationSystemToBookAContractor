@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import JobPosts from './pages/JobPosts';
+import Bookings from './pages/Bookings';
 
 
 const App = () => {
@@ -16,6 +17,7 @@ const App = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/job-posts" element={<JobPosts />} />
+        <Route path="/bookings" element={<Bookings />} />
       </Routes>
     </div>
   );
