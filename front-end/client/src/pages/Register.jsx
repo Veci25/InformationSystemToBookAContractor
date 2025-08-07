@@ -1,40 +1,70 @@
-import { useState } from 'react';
-import axios from 'axios';
+// src/pages/Register.jsx
+import React, { useState } from 'react';
+import axios from '../utils/axios';
+import { useNavigate } from 'react-router-dom';
 
-export default function Register() {
-  const [form, setForm] = useState({
-    username: '', email: '', password: '', name: '', surname: '', role: 'customer'
+const Register = () => {
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    name: '',
+    surname: '',
+    role: 'client',
   });
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const navigate = useNavigate();
+
+  const handleChange = e => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/auth/register', form);
-      alert('Registered successfully!');
+      await axios.post('/auth/register', formData);
+      alert('Registration successful. You can now login.');
+      navigate('/login');
     } catch (err) {
-      alert('Registration failed');
+      alert('Registration failed: ' + err.response?.data?.message);
     }
   };
 
   return (
-    <div className="container mt-4">
-      <h3>Register</h3>
+    <div style={{ padding: '2rem' }}>
+      <h2>Register</h2>
       <form onSubmit={handleSubmit}>
-        <input name="username" className="form-control my-2" placeholder="Username" onChange={handleChange} />
-        <input name="email" className="form-control my-2" placeholder="Email" onChange={handleChange} />
-        <input name="password" type="password" className="form-control my-2" placeholder="Password" onChange={handleChange} />
-        <input name="name" className="form-control my-2" placeholder="Name" onChange={handleChange} />
-        <input name="surname" className="form-control my-2" placeholder="Surname" onChange={handleChange} />
-        <select name="role" className="form-control my-2" onChange={handleChange}>
-          <option value="customer">Customer</option>
-          <option value="contractor">Contractor</option>
-        </select>
-        <button className="btn btn-primary mt-2" type="submit">Register</button>
+        <div>
+          <label>Username: </label>
+          <input name="username" onChange={handleChange} required />
+        </div>
+        <div>
+          <label>Email: </label>
+          <input name="email" type="email" onChange={handleChange} required />
+        </div>
+        <div>
+          <label>Password: </label>
+          <input name="password" type="password" onChange={handleChange} required />
+        </div>
+        <div>
+          <label>Name: </label>
+          <input name="name" onChange={handleChange} />
+        </div>
+        <div>
+          <label>Surname: </label>
+          <input name="surname" onChange={handleChange} />
+        </div>
+        <div>
+          <label>Role: </label>
+          <select name="role" onChange={handleChange}>
+            <option value="client">Client</option>
+            <option value="contractor">Contractor</option>
+          </select>
+        </div>
+        <button type="submit">Register</button>
       </form>
     </div>
   );
-}
+};
+
+export default Register;
