@@ -1,29 +1,72 @@
+// src/App.jsx
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
+
+import MainNav from './components/MainNav';
+import ProtectedRoute from './components/ProtectedRoute';
+
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import JobPosts from './pages/JobPosts';
 import Bookings from './pages/Bookings';
+import Ratings from './pages/Ratings';
 import AccountSettings from './pages/AccountSettings';
-import Profile from './pages/Profile';
-
 
 const App = () => {
   return (
-    <div>
+    <>
+      <MainNav />
+
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/job-posts" element={<JobPosts />} />
-        <Route path="/bookings" element={<Bookings />} />
-        <Route path="/account-settings" element={<AccountSettings />} />
-        <Route path="/profile/:userId" element={<Profile />} />
+
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/job-posts"
+          element={
+            <ProtectedRoute>
+              <JobPosts />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/bookings"
+          element={
+            <ProtectedRoute>
+              <Bookings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ratings"
+          element={
+            <ProtectedRoute>
+              <Ratings />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/account-settings"
+          element={
+            <ProtectedRoute>
+              <AccountSettings />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
-    </div>
+    </>
   );
 };
 
