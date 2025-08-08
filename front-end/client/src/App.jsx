@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import JobPosts from './pages/JobPosts';
 import Bookings from './pages/Bookings';
 import AccountSettings from './pages/AccountSettings';
+import Profile from './pages/Profile';
 
 
 const App = () => {
@@ -20,6 +21,7 @@ const App = () => {
         <Route path="/job-posts" element={<JobPosts />} />
         <Route path="/bookings" element={<Bookings />} />
         <Route path="/account-settings" element={<AccountSettings />} />
+        <Route path="/profile/:userId" element={<Profile />} />
       </Routes>
     </div>
   );
