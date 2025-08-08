@@ -6,6 +6,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import JobPosts from './pages/JobPosts';
 import Bookings from './pages/Bookings';
+import AccountSettings from './pages/AccountSettings';
 
 
 const App = () => {
@@ -18,6 +19,7 @@ const App = () => {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/job-posts" element={<JobPosts />} />
         <Route path="/bookings" element={<Bookings />} />
+        <Route path="/account-settings" element={<AccountSettings />} />
       </Routes>
     </div>
   );
