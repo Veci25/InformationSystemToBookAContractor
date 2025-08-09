@@ -13,6 +13,7 @@ import JobPosts from './pages/JobPosts';
 import Bookings from './pages/Bookings';
 import Ratings from './pages/Ratings';
 import AccountSettings from './pages/AccountSettings';
+import Skills from './pages/Skills';
 
 const App = () => {
   return (
@@ -65,6 +66,16 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="/skills"
+          element={
+            <ProtectedRoute>
+              <Skills />
+            </ProtectedRoute>
+          }
+        />
+
       </Routes>
     </>
   );
