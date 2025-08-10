@@ -1,52 +1,46 @@
+// src/pages/Profile.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "../utils/axios";
 
 const apiOrigin = (() => {
-  try { return new URL(axios.defaults.baseURL).origin; }
-  catch { return window.location.origin; }
+  try {
+    // If axios baseURL is like http://localhost:8190/api, we only want the origin
+    return new URL(axios.defaults.baseURL).origin;
+  } catch {
+    return window.location.origin;
+  }
 })();
 
 const Avatar = ({ name, src, size = 120 }) => {
-  const initials = (name || "")
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  const [errored, setErrored] = useState(false);
+  const initials = (name || '').split(' ').map(n => n?.[0] || '').slice(0,2).join('').toUpperCase();
 
-  if (src) {
+  if (src && !errored) {
     return (
       <img
         src={src}
         alt={name}
         className="rounded-circle border"
-        style={{ width: size, height: size, objectFit: "cover" }}
-        onError={(e) => (e.currentTarget.style.display = "none")}
+        style={{ width: size, height: size, objectFit: 'cover' }}
+        onError={() => setErrored(true)}
       />
     );
   }
-
   return (
-    <div
-      className="rounded-circle d-flex align-items-center justify-content-center border bg-light"
-      style={{
-        width: size,
-        height: size,
-        fontWeight: 700,
-        fontSize: size * 0.35,
-        color: "#4a5568",
-      }}
-      aria-label={name}
-    >
-      {initials || "U"}
+    <div className="rounded-circle d-flex align-items-center justify-content-center border bg-light"
+         style={{ width: size, height: size, fontWeight: 700, fontSize: size * 0.35, color: '#4a5568' }}>
+      {initials || 'U'}
     </div>
   );
 };
 
+
 const Profile = () => {
-  const { userId } = useParams();
+  const { userId: paramUserId } = useParams();
+
   const [loading, setLoading] = useState(true);
+  const [resolvedUserId, setResolvedUserId] = useState(null);
 
   const [user, setUser] = useState(null);
   const [photos, setPhotos] = useState([]);
@@ -54,49 +48,58 @@ const Profile = () => {
   const [ratings, setRatings] = useState([]);
   const [userJobs, setUserJobs] = useState([]);
 
-  // profile photo: prefer first uploaded image
-  const profilePhoto = useMemo(() => photos[0]?.image_url ?? null, [photos]);
+  // Use the dedicated avatar from users.profile_picture
+  const profilePhoto = useMemo(() => {
+    if (!user?.profile_picture) return null;
+    return `${apiOrigin}/uploads/profile_pictures/${user.profile_picture}?v=${user.profile_picture}`;
+  }, [user]);
+  
+
+  
 
   useEffect(() => {
     const run = async () => {
       try {
-        // You require auth for some endpoints; include token if you have one.
-        const authHeader = localStorage.getItem("token")
+        const headers = localStorage.getItem("token")
           ? { Authorization: `Bearer ${localStorage.getItem("token")}` }
           : {};
 
-        // 1) User
-        const u = await axios.get(`/users/${userId}`, { headers: authHeader });
+        // 1) Which user to show
+        let id = paramUserId;
+        if (!id) {
+          const me = await axios.get("/users/me", { headers });
+          id = me.data.user_id;
+        }
+        setResolvedUserId(id);
+
+        // 2) User
+        const u = await axios.get(`/users/${id}`, { headers });
         setUser(u.data);
 
-        // 2) Photos (public route)
-        const ph = await axios.get(`/photos/user/${userId}`);
-        setPhotos(ph.data);
+        // 3) Gallery photos (public)
+        const ph = await axios.get(`/photos/user/${id}`);
+        setPhotos(ph.data || []);
 
-        // 3) Average rating (needs token per your routes)
+        // 4) Average rating (requires token by your routes)
         try {
-          const ar = await axios.get(`/ratings/average/${userId}`, {
-            headers: authHeader,
-          });
+          const ar = await axios.get(`/ratings/average/${id}`, { headers });
           setAvgRating(ar.data?.average_rating ?? null);
         } catch {
           setAvgRating(null);
         }
 
-        // 4) All ratings for this user (needs token)
+        // 5) Ratings
         try {
-          const rr = await axios.get(`/ratings/user/${userId}`, {
-            headers: authHeader,
-          });
+          const rr = await axios.get(`/ratings/user/${id}`, { headers });
           setRatings(rr.data || []);
         } catch {
           setRatings([]);
         }
 
-        // 5) Client’s job posts (filter by user_id)
+        // 6) Job posts owned by this user (if client)
         try {
-          const jp = await axios.get(`/job-posts`);
-          const mine = (jp.data || []).filter((j) => j.user_id === Number(userId));
+          const jp = await axios.get(`/job-posts`, { headers });
+          const mine = (jp.data || []).filter((j) => j.user_id === Number(id));
           setUserJobs(mine);
         } catch {
           setUserJobs([]);
@@ -108,7 +111,7 @@ const Profile = () => {
       }
     };
     run();
-  }, [userId]);
+  }, [paramUserId]);
 
   if (loading) {
     return (
@@ -118,8 +121,7 @@ const Profile = () => {
           <span>Loading profile…</span>
         </div>
       </div>
-    );
-  }
+  );}
 
   if (!user) {
     return (
@@ -134,7 +136,11 @@ const Profile = () => {
       {/* HEADER */}
       <div className="card shadow-sm mb-4">
         <div className="card-body d-flex flex-wrap align-items-center gap-4">
-          <Avatar name={`${user.name || ""} ${user.surname || ""}`} src={profilePhoto} size={96} />
+          <Avatar
+            name={`${user.name || ""} ${user.surname || ""}`}
+            src={profilePhoto}
+            size={96}
+          />
 
           <div className="flex-grow-1">
             <h3 className="mb-1">
@@ -153,32 +159,33 @@ const Profile = () => {
             )}
           </div>
 
-          {/* CTA example */}
-          <div className="ms-auto">
-            <a href="/account-settings" className="btn btn-outline-primary">
-              Edit Profile
-            </a>
-          </div>
+          {/* Only show Edit when viewing own profile (no :id in URL) */}
+          {!paramUserId && (
+            <div className="ms-auto">
+              <a href="/account-settings" className="btn btn-outline-primary">
+                Edit Profile
+              </a>
+            </div>
+          )}
         </div>
       </div>
 
       {/* CONTENT */}
       <div className="row g-4">
-        {/* LEFT: About + Ratings */}
+        {/* LEFT */}
         <div className="col-lg-8">
-          {/* ABOUT */}
+          {/* About */}
           <div className="card shadow-sm mb-4">
             <div className="card-body">
               <h5 className="card-title mb-3">About</h5>
               <p className="mb-0 text-muted">
-                {/* You don’t have a bio field yet; placeholder here */}
                 This contractor hasn’t added a bio yet. Add one in Account Settings to help
                 clients understand your skills, experience, and availability.
               </p>
             </div>
           </div>
 
-          {/* RATINGS */}
+          {/* Ratings */}
           <div className="card shadow-sm mb-4">
             <div className="card-body">
               <div className="d-flex justify-content-between align-items-center mb-3">
@@ -208,7 +215,7 @@ const Profile = () => {
             </div>
           </div>
 
-          {/* JOB POSTS (only really relevant for clients) */}
+          {/* Job posts (for clients) */}
           {userJobs.length > 0 && (
             <div className="card shadow-sm mb-4">
               <div className="card-body">
@@ -238,7 +245,7 @@ const Profile = () => {
           )}
         </div>
 
-        {/* RIGHT: Photos gallery */}
+        {/* RIGHT */}
         <div className="col-lg-4">
           <div className="card shadow-sm">
             <div className="card-body">
@@ -250,7 +257,7 @@ const Profile = () => {
                   {photos.slice(0, 6).map((p) => (
                     <div className="col-6" key={p.photo_id}>
                       <img
-                        src={p.image_url /* already full from your controller */}
+                        src={p.image_url}
                         alt={p.caption || "Photo"}
                         className="img-fluid rounded border"
                         style={{ objectFit: "cover", width: "100%", height: 110 }}
@@ -260,24 +267,22 @@ const Profile = () => {
                   ))}
                 </div>
               )}
-              <div className="mt-3">
-                <a href="/account-settings" className="btn btn-sm btn-outline-secondary w-100">
-                  Manage Photos
-                </a>
-              </div>
+              {!paramUserId && (
+                <div className="mt-3">
+                  <a href="/gallery" className="btn btn-sm btn-outline-secondary w-100">
+                    Manage Gallery
+                  </a>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Contact card (optional) */}
+          {/* Contact */}
           <div className="card shadow-sm mt-4">
             <div className="card-body">
               <h6 className="card-title mb-2">Contact</h6>
               <div className="small text-muted">
-                {user.email ? (
-                  <a href={`mailto:${user.email}`}>{user.email}</a>
-                ) : (
-                  "No email provided."
-                )}
+                {user.email ? <a href={`mailto:${user.email}`}>{user.email}</a> : "No email provided."}
               </div>
             </div>
           </div>
