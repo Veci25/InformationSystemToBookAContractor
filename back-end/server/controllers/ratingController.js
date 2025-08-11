@@ -1,21 +1,38 @@
 const db = require('../config/db');
 
 exports.createRating = async (req, res) => {
-  const user_id = req.user.id; 
-  const { rating_value, target_user_id, feedback_text } = req.body;
-
   try {
+    const raterId = req.user?.user_id ?? req.user?.id;
+    const { rating_value, target_user_id, feedback_text } = req.body;
+
+    if (!raterId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    if (!target_user_id || rating_value == null) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    if (Number(raterId) === Number(target_user_id)) {
+      return res.status(400).json({ message: "You can't rate yourself." });
+    }
+
+    const val = Number(rating_value);
+    if (!Number.isFinite(val) || val < 1 || val > 5) {
+      return res.status(400).json({ message: 'Rating must be between 1 and 5' });
+    }
+
     const [result] = await db.query(
-      'INSERT INTO ratings (user_id, target_user_id, rating_value, feedback_text) VALUES (?, ?, ?, ?)',
-      [user_id, target_user_id, rating_value, feedback_text]
+      `INSERT INTO ratings (user_id, target_user_id, rating_value, feedback_text, created_at)
+       VALUES (?, ?, ?, ?, NOW())`,
+      [raterId, target_user_id, val, feedback_text || null]
     );
-    res.status(201).json({ message: 'Rating submitted', rating_id: result.insertId });
+
+    return res.status(201).json({ message: 'Rating submitted', rating_id: result.insertId });
   } catch (error) {
     console.error('Error creating rating:', error);
-    res.status(500).json({ message: 'Server error' });
+    return res.status(500).json({ message: 'Server error' });
   }
 };
-
 exports.getRatingsForUser = async (req, res) => {
   const { userId } = req.params;
 
