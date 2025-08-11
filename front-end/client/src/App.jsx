@@ -19,6 +19,8 @@ import JobPostDetails from "./pages/JobPostDetails";
 import MatchingJobs from './pages/MatchingJobs';
 import PublicUserProfile from './pages/PublicUserProfile';
 import AdminPanel from './pages/AdminPanel';
+import JobPostEdit from './pages/JobPostEdit';
+
 
 const App = () => {
   return (
@@ -42,6 +44,15 @@ const App = () => {
         <Route path="/job-posts/:id" element={<JobPostDetails />} />
         <Route path="/users/:id" element={<PublicUserProfile />} />
         <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
+
+        <Route
+          path="/job-posts/:id/edit"
+          element={
+            <ProtectedRoute>
+              <JobPostEdit />
+            </ProtectedRoute>
+          }
+        />
 
         {/* profile supports both /profile and /profile/:userId */}
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
