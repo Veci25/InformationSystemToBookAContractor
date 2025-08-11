@@ -16,6 +16,9 @@ import AccountSettings from './pages/AccountSettings';
 import Skills from './pages/Skills';
 import Profile from './pages/Profile';
 import Gallery from './pages/Gallery';
+import FindContractors from './pages/FindContractors';
+import MatchingJobs from './pages/MatchingJobs';
+import JobPostDetails from "./pages/JobPostDetails";
 
 const App = () => {
   return (
@@ -36,7 +39,8 @@ const App = () => {
         <Route path="/skills" element={<ProtectedRoute><Skills /></ProtectedRoute>} />
         <Route path="/account-settings" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
         <Route path="/matching-jobs" element={<ProtectedRoute><MatchingJobs /></ProtectedRoute>} />
-
+        <Route path="/job-posts/:id" element={<JobPostDetails />} />
+        <Route path="/find-contractors" element={<ProtectedRoute><FindContractors /></ProtectedRoute>} />
 
         {/* profile supports both /profile and /profile/:userId */}
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
