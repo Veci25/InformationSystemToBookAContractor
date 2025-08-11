@@ -47,3 +47,41 @@ exports.login = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+exports.changePassword = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { current_password, new_password } = req.body;
+
+    if (!current_password || !new_password) {
+      return res.status(400).json({ message: 'Both current_password and new_password are required' });
+    }
+    if (new_password.length < 8) {
+      return res.status(400).json({ message: 'New password must be at least 8 characters' });
+    }
+
+    const [[user]] = await db.query(
+      'SELECT user_id, username, password, role FROM users WHERE user_id = ?',
+      [userId]
+    );
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const ok = await bcrypt.compare(current_password, user.password);
+    if (!ok) return res.status(401).json({ message: 'Current password is incorrect' });
+
+    const newHash = await bcrypt.hash(new_password, 10);
+    await db.query('UPDATE users SET password = ? WHERE user_id = ?', [newHash, userId]);
+
+    const [[row]] = await db.query('SELECT password FROM users WHERE user_id = ?', [userId]);
+    const persisted = await bcrypt.compare(new_password, row.password);
+    if (!persisted) return res.status(500).json({ message: 'Password not persisted correctly' });
+
+    const token = jwt.sign({ id: user.user_id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+
+    return res.json({ message: 'Password updated', token, username: user.username });
+  } catch (err) {
+    console.error('changePassword error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
