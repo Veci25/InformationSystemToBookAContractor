@@ -3,6 +3,7 @@ const app = express();
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
+const path = require('path');   
 dotenv.config();
 
 const port = process.env.PORT || 8190;
@@ -14,10 +15,12 @@ const bookingRoutes = require('./routes/bookings');
 const skillRoutes = require('./routes/skills');
 const ratingRoutes = require('./routes/ratings'); 
 const photoRoutes = require('./routes/photos');
+const adminRoutes = require('./routes/admin')
 const db = require('./config/db'); 
 
 app.use(cors());
 app.use(bodyParser.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 //Routes
 app.use('/api/auth', authRoutes);
@@ -27,6 +30,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/skills', skillRoutes);
 app.use('/api/ratings', ratingRoutes);
 app.use('/api/photos', photoRoutes);
+app.use('/api/admin', adminRoutes);
 
 //Test DB Route 
 app.get('/api/test-db', async (req, res) => {
