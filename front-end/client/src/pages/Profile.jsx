@@ -1,11 +1,9 @@
-// src/pages/Profile.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "../utils/axios";
 
 const apiOrigin = (() => {
   try {
-    // If axios baseURL is like http://localhost:8190/api, we only want the origin
     return new URL(axios.defaults.baseURL).origin;
   } catch {
     return window.location.origin;
@@ -48,7 +46,6 @@ const Profile = () => {
   const [ratings, setRatings] = useState([]);
   const [userJobs, setUserJobs] = useState([]);
 
-  // Use the dedicated avatar from users.profile_picture
   const profilePhoto = useMemo(() => {
     if (!user?.profile_picture) return null;
     return `${apiOrigin}/uploads/profile_pictures/${user.profile_picture}?v=${user.profile_picture}`;
@@ -64,7 +61,7 @@ const Profile = () => {
           ? { Authorization: `Bearer ${localStorage.getItem("token")}` }
           : {};
 
-        // 1) Which user to show
+      
         let id = paramUserId;
         if (!id) {
           const me = await axios.get("/users/me", { headers });
@@ -72,15 +69,15 @@ const Profile = () => {
         }
         setResolvedUserId(id);
 
-        // 2) User
+
         const u = await axios.get(`/users/${id}`, { headers });
         setUser(u.data);
 
-        // 3) Gallery photos (public)
+        
         const ph = await axios.get(`/photos/user/${id}`);
         setPhotos(ph.data || []);
 
-        // 4) Average rating (requires token by your routes)
+        
         try {
           const ar = await axios.get(`/ratings/average/${id}`, { headers });
           setAvgRating(ar.data?.average_rating ?? null);
@@ -88,7 +85,7 @@ const Profile = () => {
           setAvgRating(null);
         }
 
-        // 5) Ratings
+        
         try {
           const rr = await axios.get(`/ratings/user/${id}`, { headers });
           setRatings(rr.data || []);
@@ -96,7 +93,7 @@ const Profile = () => {
           setRatings([]);
         }
 
-        // 6) Job posts owned by this user (if client)
+        
         try {
           const jp = await axios.get(`/job-posts`, { headers });
           const mine = (jp.data || []).filter((j) => j.user_id === Number(id));
@@ -133,7 +130,6 @@ const Profile = () => {
 
   return (
     <div className="container my-4">
-      {/* HEADER */}
       <div className="card shadow-sm mb-4">
         <div className="card-body d-flex flex-wrap align-items-center gap-4">
           <Avatar
@@ -159,7 +155,7 @@ const Profile = () => {
             )}
           </div>
 
-          {/* Only show Edit when viewing own profile (no :id in URL) */}
+        
           {!paramUserId && (
             <div className="ms-auto">
               <a href="/account-settings" className="btn btn-outline-primary">
@@ -170,22 +166,27 @@ const Profile = () => {
         </div>
       </div>
 
-      {/* CONTENT */}
       <div className="row g-4">
-        {/* LEFT */}
-        <div className="col-lg-8">
-          {/* About */}
+        <div className="col-lg-8">        
           <div className="card shadow-sm mb-4">
             <div className="card-body">
               <h5 className="card-title mb-3">About</h5>
-              <p className="mb-0 text-muted">
-                This contractor hasn’t added a bio yet. Add one in Account Settings to help
-                clients understand your skills, experience, and availability.
-              </p>
+
+              {user.bio && user.bio.trim() ? (                
+                <p className="mb-0" style={{ whiteSpace: "pre-wrap" }}>
+                  {user.bio}
+                </p>
+              ) : (                
+                <p className="mb-0 text-muted">
+                  This user hasn’t added a bio yet. Add one in Account Settings to help
+                  others understand your skills, experience, and availability.
+                </p>
+              )}
             </div>
           </div>
 
-          {/* Ratings */}
+
+      
           <div className="card shadow-sm mb-4">
             <div className="card-body">
               <div className="d-flex justify-content-between align-items-center mb-3">
@@ -214,8 +215,7 @@ const Profile = () => {
               )}
             </div>
           </div>
-
-          {/* Job posts (for clients) */}
+          
           {userJobs.length > 0 && (
             <div className="card shadow-sm mb-4">
               <div className="card-body">
@@ -244,8 +244,7 @@ const Profile = () => {
             </div>
           )}
         </div>
-
-        {/* RIGHT */}
+        
         <div className="col-lg-4">
           <div className="card shadow-sm">
             <div className="card-body">
@@ -275,9 +274,7 @@ const Profile = () => {
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Contact */}
+          </div>          
           <div className="card shadow-sm mt-4">
             <div className="card-body">
               <h6 className="card-title mb-2">Contact</h6>
