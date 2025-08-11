@@ -2,73 +2,247 @@
 import React, { useEffect, useState } from 'react';
 import axios from '../utils/axios';
 
-const Skills = () => {
+export default function Skills() {
   const [user, setUser] = useState(null);
+
+  // catalog + add form
   const [skills, setSkills] = useState([]);
   const [selectedSkill, setSelectedSkill] = useState('');
   const [proficiency, setProficiency] = useState('Beginner');
   const [experience, setExperience] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  // my skills (editable)
+  const [mySkills, setMySkills] = useState([]);
+  const [loadingMine, setLoadingMine] = useState(true);
+  const [savingRow, setSavingRow] = useState({}); // { [skill_id]: true|false }
 
   useEffect(() => {
-    const fetch = async () => {
-      const res = await axios.get('/users/me');
-      setUser(res.data);
+    (async () => {
+      try {
+        const me = await axios.get('/users/me');
+        setUser(me.data);
 
-      const allSkills = await axios.get('/skills');
-      setSkills(allSkills.data);
-    };
-    fetch();
+        const all = await axios.get('/skills');
+        setSkills(all.data || []);
+
+        await loadMine();
+      } catch (err) {
+        console.error('Failed to load skills/user', err);
+        alert('Failed to load skills. Please refresh.');
+      }
+    })();
   }, []);
 
-  const addSkill = async () => {
-    if (!selectedSkill || !proficiency || !experience) {
+  const loadMine = async () => {
+    setLoadingMine(true);
+    try {
+      const { data } = await axios.get('/skills/me');
+      setMySkills(data || []);
+    } catch (e) {
+      console.error(e);
+      setMySkills([]);
+    } finally {
+      setLoadingMine(false);
+    }
+  };
+
+  const addSkill = async (e) => {
+    e.preventDefault();
+    if (!selectedSkill || !proficiency || experience === '') {
       alert('Please fill all fields');
       return;
     }
 
     try {
+      setSubmitting(true);
       await axios.post('/skills/user', {
         user_id: user.user_id,
-        skill_id: parseInt(selectedSkill),
+        skill_id: parseInt(selectedSkill, 10),
         proficiency_level: proficiency,
-        years_experience: parseInt(experience),
+        years_experience: Math.max(0, parseInt(experience, 10) || 0),
       });
+      // reset form + refresh my skills
+      setSelectedSkill('');
+      setProficiency('Beginner');
+      setExperience('');
+      await loadMine();
       alert('Skill added!');
     } catch (err) {
-      alert('Failed to add skill');
       console.error(err);
+      alert(err.response?.data?.message || 'Failed to add skill');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const updateYears = async (skill_id, value) => {
+    // client clamp; server also clamps 0..60
+    const years =
+      value === '' || value === null
+        ? null
+        : Math.max(0, Math.min(60, parseInt(value, 10) || 0));
+
+    setSavingRow((m) => ({ ...m, [skill_id]: true }));
+    try {
+      await axios.patch(`/skills/me/${skill_id}/experience`, { years_experience: years });
+      setMySkills((prev) =>
+        prev.map((s) => (s.skill_id === skill_id ? { ...s, years_experience: years } : s))
+      );
+    } catch (e) {
+      console.error(e);
+      alert(e.response?.data?.message || 'Failed to update experience');
+      // reload to restore correct values
+      await loadMine();
+    } finally {
+      setSavingRow((m) => ({ ...m, [skill_id]: false }));
     }
   };
 
   return (
-    <div className="container">
-      <h2>Add Skill to Profile</h2>
+    <div className="container my-5">
+      <div className="d-flex align-items-center justify-content-between mb-4">
+        <div>
+          <h2 className="mb-0">Skills</h2>
+          <small className="text-muted">Add skills and keep your experience up to date.</small>
+        </div>
+      </div>
 
-      <select value={selectedSkill} onChange={e => setSelectedSkill(e.target.value)}>
-        <option value="">-- Select Skill --</option>
-        {skills.map(s => (
-          <option key={s.skill_id} value={s.skill_id}>{s.skill_name}</option>
-        ))}
-      </select>
+      <div className="row g-4">
+        {/* Add Skill */}
+        <div className="col-lg-6">
+          <div className="card shadow-sm">
+            <div className="card-body">
+              <h4 className="card-title mb-3">Add Skill to Profile</h4>
+              <form onSubmit={addSkill} className="row g-3">
+                <div className="col-12">
+                  <label className="form-label">Skill</label>
+                  <select
+                    className="form-select"
+                    value={selectedSkill}
+                    onChange={(e) => setSelectedSkill(e.target.value)}
+                    required
+                  >
+                    <option value="">-- Select Skill --</option>
+                    {skills.map((s) => (
+                      <option key={s.skill_id} value={s.skill_id}>
+                        {s.skill_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-      <select value={proficiency} onChange={e => setProficiency(e.target.value)}>
-        <option value="">-- Proficiency Level --</option>
-        <option value="Beginner">Beginner</option>
-        <option value="Intermediate">Intermediate</option>
-        <option value="Expert">Expert</option>
-      </select>
+                <div className="col-md-6">
+                  <label className="form-label">Proficiency</label>
+                  <select
+                    className="form-select"
+                    value={proficiency}
+                    onChange={(e) => setProficiency(e.target.value)}
+                    required
+                  >
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Expert">Expert</option>
+                  </select>
+                </div>
 
-      <input
-        type="number"
-        placeholder="Years of Experience"
-        min="0"
-        value={experience}
-        onChange={e => setExperience(e.target.value)}
-      />
+                <div className="col-md-6">
+                  <label className="form-label">Years of Experience</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="60"
+                    className="form-control"
+                    placeholder="e.g. 3"
+                    value={experience}
+                    onChange={(e) => setExperience(e.target.value)}
+                    required
+                  />
+                </div>
 
-      <button onClick={addSkill}>Add Skill</button>
+                <div className="col-12">
+                  <button
+                    type="submit"
+                    className="btn btn-success"
+                    disabled={submitting || !user}
+                  >
+                    {submitting ? 'Adding…' : 'Add Skill'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        {/* My Skills (editable years) */}
+        <div className="col-lg-6">
+          <div className="card shadow-sm">
+            <div className="card-body">
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h4 className="card-title mb-0">My Skills</h4>
+                {loadingMine && <span className="text-muted small">Loading…</span>}
+              </div>
+
+              {mySkills.length === 0 ? (
+                <div className="text-muted">You haven’t added any skills yet.</div>
+              ) : (
+                <div className="table-responsive">
+                  <table className="table align-middle">
+                    <thead>
+                      <tr>
+                        <th>Skill</th>
+                        <th>Proficiency</th>
+                        <th style={{ width: 200 }}>Years</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {mySkills.map((s) => (
+                        <tr key={s.skill_id}>
+                          <td>{s.skill_name || s.skill_id}</td>
+                          <td className="text-capitalize">
+                            {s.proficiency_level || '—'}
+                          </td>
+                          <td>
+                            <div className="d-flex align-items-center gap-2">
+                              <input
+                                type="number"
+                                min="0"
+                                max="60"
+                                className="form-control"
+                                style={{ maxWidth: 110 }}
+                                value={s.years_experience ?? ''}
+                                onChange={(e) =>
+                                  setMySkills((prev) =>
+                                    prev.map((x) =>
+                                      x.skill_id === s.skill_id
+                                        ? {
+                                            ...x,
+                                            years_experience:
+                                              e.target.value === ''
+                                                ? ''
+                                                : parseInt(e.target.value, 10) || 0,
+                                          }
+                                        : x
+                                    )
+                                  )
+                                }
+                                onBlur={(e) => updateYears(s.skill_id, e.target.value)}
+                              />
+                              {savingRow[s.skill_id] && (
+                                <span className="text-muted small">Saving…</span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
-};
-
-export default Skills;
+}
