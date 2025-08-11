@@ -68,17 +68,25 @@ exports.removeUserSkill = async (req, res) => {
 
 
 exports.addJobSkill = async (req, res) => {
-  const { job_post_id, skill_id, importance_level, is_mandatory } = req.body;
-  if (!job_post_id || !skill_id) return res.status(400).json({ message: 'Missing fields' });
-
   try {
+    const job_post_id = Number(req.body.job_post_id);
+    const skill_id = Number(req.body.skill_id);
+    const importance_level = req.body.importance_level || 'Medium';
+    const is_mandatory = req.body.is_mandatory ? 1 : 0; 
+
+    if (!job_post_id || !skill_id) {
+      return res.status(400).json({ message: 'Missing fields' });
+    }
+
     await db.query(
-      'INSERT INTO job_skills (job_post_id, skill_id, importance_level, is_mandatory) VALUES (?, ?, ?, ?)',
-      [job_post_id, skill_id, importance_level || 'Medium', is_mandatory || false]
+      `INSERT IGNORE INTO job_skills (job_post_id, skill_id, importance_level, is_mandatory)
+       VALUES (?, ?, ?, ?)`,
+      [job_post_id, skill_id, importance_level, is_mandatory]
     );
-    res.status(201).json({ message: 'Skill added to job post' });
+
+    return res.status(201).json({ message: 'Skill added to job post' });
   } catch (error) {
-    console.error(error);
+    console.error('addJobSkill error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -98,7 +106,6 @@ exports.removeJobSkill = async (req, res) => {
   }
 };
 
-// match job skill and user skill
 exports.getJobsForUser = async (req, res) => {
   const { user_id } = req.params;
   try {
@@ -137,6 +144,74 @@ exports.matchContractorsForJobPost = async (req, res) => {
     res.json(rows);
   } catch (error) {
     console.error('Error fetching matching contractors:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.updateMySkillExperience = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const skillId = parseInt(req.params.skillId, 10);
+    let { years_experience } = req.body;
+
+    if (!Number.isInteger(skillId) || skillId <= 0) {
+      return res.status(400).json({ message: 'Invalid skill id' });
+    }
+
+    if (years_experience === '' || years_experience === null || typeof years_experience === 'undefined') {
+      years_experience = null;
+    } else {
+      years_experience = parseInt(years_experience, 10);
+      if (Number.isNaN(years_experience) || years_experience < 0) years_experience = 0;
+      if (years_experience > 60) years_experience = 60;
+    }
+
+    const [chk] = await db.query(
+      'SELECT 1 FROM user_skills WHERE user_id = ? AND skill_id = ?',
+      [userId, skillId]
+    );
+    if (!chk.length) {
+      return res.status(404).json({ message: 'Skill not found for this user' });
+    }
+
+    await db.query(
+      'UPDATE user_skills SET years_experience = ? WHERE user_id = ? AND skill_id = ?',
+      [years_experience, userId, skillId]
+    );
+
+    const [row] = await db.query(
+      `SELECT us.user_id, us.skill_id, us.proficiency_level, us.years_experience, s.skill_name
+       FROM user_skills us
+       JOIN skills s ON s.skill_id = us.skill_id
+       WHERE us.user_id = ? AND us.skill_id = ?`,
+      [userId, skillId]
+    );
+
+    return res.json({ message: 'Updated', item: row[0] });
+  } catch (err) {
+    console.error('updateMySkillExperience error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.getMySkills = async (req, res) => {
+  try {
+    const uid = req.user.id;
+    const [rows] = await db.query(
+      `SELECT us.user_id,
+              us.skill_id,
+              us.proficiency_level,
+              us.years_experience,
+              s.skill_name
+         FROM user_skills us
+         JOIN skills s ON s.skill_id = us.skill_id
+        WHERE us.user_id = ?
+        ORDER BY s.skill_name`,
+      [uid]
+    );
+    res.json(rows);
+  } catch (e) {
+    console.error('getMySkills error:', e);
     res.status(500).json({ message: 'Server error' });
   }
 };
