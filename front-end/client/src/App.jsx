@@ -1,4 +1,3 @@
-// src/App.jsx
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 
@@ -19,8 +18,7 @@ import Gallery from './pages/Gallery';
 import JobPostDetails from "./pages/JobPostDetails";
 import MatchingJobs from './pages/MatchingJobs';
 import PublicUserProfile from './pages/PublicUserProfile';
-import FindContractors from './pages/FindContractors';
-
+import AdminPanel from './pages/AdminPanel';
 
 const App = () => {
   return (
@@ -43,8 +41,7 @@ const App = () => {
         <Route path="/matching-jobs" element={<ProtectedRoute><MatchingJobs /></ProtectedRoute>} />
         <Route path="/job-posts/:id" element={<JobPostDetails />} />
         <Route path="/users/:id" element={<PublicUserProfile />} />
-        <Route path="/find-contractors" element={<ProtectedRoute><FindContractors /></ProtectedRoute>} />
-
+        <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
 
         {/* profile supports both /profile and /profile/:userId */}
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
