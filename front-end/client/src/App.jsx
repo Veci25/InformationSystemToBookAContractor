@@ -14,6 +14,8 @@ import Bookings from './pages/Bookings';
 import Ratings from './pages/Ratings';
 import AccountSettings from './pages/AccountSettings';
 import Skills from './pages/Skills';
+import Profile from './pages/Profile';
+import Gallery from './pages/Gallery';
 
 const App = () => {
   return (
@@ -21,60 +23,37 @@ const App = () => {
       <MainNav />
 
       <Routes>
+        {/* public */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
+        {/* private */}
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/job-posts" element={<ProtectedRoute><JobPosts /></ProtectedRoute>} />
+        <Route path="/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
+        <Route path="/ratings" element={<ProtectedRoute><Ratings /></ProtectedRoute>} />
+        <Route path="/skills" element={<ProtectedRoute><Skills /></ProtectedRoute>} />
+        <Route path="/account-settings" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
+        <Route path="/matching-jobs" element={<ProtectedRoute><MatchingJobs /></ProtectedRoute>} />
+
+
+        {/* profile supports both /profile and /profile/:userId */}
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/profile/:userId" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+
+        <Route path="*" element={<div className="container py-4 text-muted">Not Found</div>} />
+
         <Route
-          path="/dashboard"
+          path="/gallery"
           element={
             <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/job-posts"
-          element={
-            <ProtectedRoute>
-              <JobPosts />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/bookings"
-          element={
-            <ProtectedRoute>
-              <Bookings />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/ratings"
-          element={
-            <ProtectedRoute>
-              <Ratings />
-            </ProtectedRoute>
-          }
-        />
-        
-        <Route
-          path="/account-settings"
-          element={
-            <ProtectedRoute>
-              <AccountSettings />
+              <Gallery />
             </ProtectedRoute>
           }
         />
 
-        <Route
-          path="/skills"
-          element={
-            <ProtectedRoute>
-              <Skills />
-            </ProtectedRoute>
-          }
-        />
+        
 
       </Routes>
     </>
