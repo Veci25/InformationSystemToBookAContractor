@@ -2,7 +2,6 @@ const db = require('../config/db');
 const fs = require('fs');
 const path = require('path');
 
-// Upload photo - already provided earlier
 exports.uploadPhoto = async (req, res) => {
   const userId = req.user.id;
   const { caption } = req.body;
@@ -27,7 +26,6 @@ exports.uploadPhoto = async (req, res) => {
   }
 };
 
-// Get photos by user
 exports.getPhotosByUser = async (req, res) => {
   const { userId } = req.params;
 
@@ -49,7 +47,6 @@ exports.getPhotosByUser = async (req, res) => {
   }
 };
 
-// Delete photo
 exports.deletePhoto = async (req, res) => {
   const { photoId } = req.params;
   const userId = req.user.id;
@@ -62,7 +59,6 @@ exports.deletePhoto = async (req, res) => {
 
     if (!photo) return res.status(404).json({ message: 'Photo not found or unauthorized' });
 
-    // Delete file from disk
     const filePath = path.join(__dirname, '..', 'uploads', photo.image_filename);
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
@@ -75,7 +71,6 @@ exports.deletePhoto = async (req, res) => {
   }
 };
 
-// Update photo (caption and/or replace image)
 exports.updatePhoto = async (req, res) => {
   const { caption } = req.body;
   const { photoId } = req.params;
@@ -90,11 +85,9 @@ exports.updatePhoto = async (req, res) => {
 
     if (!photo) return res.status(404).json({ message: 'Photo not found or unauthorized' });
 
-    // Prepare update values
     const newFilename = file ? file.filename : photo.image_filename;
     const newCaption = caption ?? photo.caption;
 
-    // Delete old file if replacing
     if (file && photo.image_filename) {
       const oldPath = path.join(__dirname, '..', 'uploads', photo.image_filename);
       if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
