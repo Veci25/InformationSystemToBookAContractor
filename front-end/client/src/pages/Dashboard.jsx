@@ -1,3 +1,4 @@
+// src/pages/Dashboard.jsx
 import React, { useEffect, useState } from 'react';
 import axios from '../utils/axios';
 import { useNavigate, Link } from 'react-router-dom';
@@ -9,11 +10,13 @@ const Dashboard = () => {
   const [loadingData, setLoadingData] = useState(true);
   const navigate = useNavigate();
 
+  // require auth
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) navigate('/login');
   }, [navigate]);
 
+  // load current user
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -30,6 +33,7 @@ const Dashboard = () => {
     fetchUser();
   }, [navigate]);
 
+  // load role-specific data
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
@@ -51,69 +55,63 @@ const Dashboard = () => {
     fetchData();
   }, [user]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/login');
-  };
-
   if (loadingUser) {
-    return (
-      <div className="container py-5 text-center text-muted">Loading user…</div>
-    );
+    return <div className="container py-5 text-center text-muted">Loading user…</div>;
   }
+
+  // uniform stat card
+  const StatCard = ({ label, value, actions = false }) => (
+    <div className="col-6 col-lg-3">
+      <div className="card shadow-sm h-100">
+        <div
+          className="card-body d-flex flex-column align-items-center justify-content-center text-center"
+          style={{ minHeight: 120 }}
+        >
+          <small className="text-muted">{label}</small>
+          {!actions ? (
+            <div className="fs-2 fw-semibold mt-1">{value}</div>
+          ) : (
+            <div className="d-flex gap-2 mt-2 flex-wrap justify-content-center">
+              {value}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="container py-4">
-      {/* Header */}
-      <div className="d-flex align-items-center justify-content-between mb-4">
-        <div>
-          <h2 className="mb-0">Dashboard</h2>
-          <small className="text-muted">
-            Welcome, <strong>{user?.name || user?.username}</strong> &middot; {user?.role}
-          </small>
-        </div>
-        <div className="d-flex gap-2">
-          {user?.role === 'client' ? (
-            <>
-              <Link to="/job-posts" className="btn btn-primary">Create Job Post</Link>
-              <Link to="/bookings" className="btn btn-outline-primary">Bookings</Link>
-            </>
-          ) : (
-            <>
-              <Link to="/skills" className="btn btn-primary">Manage Skills</Link>
-              <Link to="/ratings" className="btn btn-outline-primary">Ratings</Link>
-            </>
-          )}
-          <button className="btn btn-outline-danger" onClick={handleLogout}>Logout</button>
-        </div>
+      {/* Header (no extra buttons; logout/profile already in the navbar) */}
+      <div className="mb-4">
+        <h2 className="mb-0">Dashboard</h2>
+        <small className="text-muted">
+          Welcome, <strong>{user?.name || user?.username}</strong> · {user?.role}
+        </small>
       </div>
 
-      {/* Quick stats */}
+      {/* Quick stats (uniform sizing) */}
       <div className="row g-3 mb-4">
-        <div className="col-sm-6 col-lg-3">
-          <div className="card shadow-sm text-center p-3">
-            <small className="text-muted">Items</small>
-            <h3 className="mb-0">{loadingData ? '—' : data.length}</h3>
-          </div>
-        </div>
-        <div className="col-sm-6 col-lg-3">
-          <div className="card shadow-sm text-center p-3">
-            <small className="text-muted">Role</small>
-            <h3 className="mb-0 text-capitalize">{user?.role}</h3>
-          </div>
-        </div>
-        <div className="col-sm-6 col-lg-3">
-          <div className="card shadow-sm text-center p-3">
-            <small className="text-muted">User ID</small>
-            <h5 className="mb-0">{user?.user_id}</h5>
-          </div>
-        </div>
-        <div className="col-sm-6 col-lg-3">
-          <div className="card shadow-sm text-center p-3">
-            <small className="text-muted">Actions</small>
-            <h5 className="mb-0">{user?.role === 'client' ? 'Post / Book' : 'Match / Rate'}</h5>
-          </div>
-        </div>
+        <StatCard label="Items" value={loadingData ? '—' : data.length} />
+        <StatCard label="Role" value={<span className="text-capitalize">{user?.role}</span>} />
+        <StatCard label="User ID" value={user?.user_id} />
+        <StatCard
+          label="Shortcuts"
+          actions
+          value={
+            user?.role === 'client' ? (
+              <>
+                <Link to="/job-posts" className="btn btn-sm btn-outline-primary">New Post</Link>
+                <Link to="/bookings" className="btn btn-sm btn-outline-secondary">Bookings</Link>
+              </>
+            ) : (
+              <>
+                <Link to="/matching-jobs" className="btn btn-sm btn-outline-primary">Match</Link>
+                <Link to="/ratings" className="btn btn-sm btn-outline-secondary">Rate</Link>
+              </>
+            )
+          }
+        />
       </div>
 
       {/* Main content */}
@@ -121,15 +119,14 @@ const Dashboard = () => {
         <div className="card-body">
           {user?.role === 'contractor' ? (
             <>
-              <div className="d-flex align-items-center justify-content-between mb-3">
-                <h5 className="mb-0">Matched Jobs for You</h5>
-                <Link to="/skills" className="btn btn-sm btn-outline-secondary">Update Skills</Link>
-              </div>
+              <h5 className="mb-3">Matched Jobs for You</h5>
 
               {loadingData ? (
                 <div className="text-muted">Loading matches…</div>
               ) : data.length === 0 ? (
-                <div className="text-muted">No matches yet. Add more skills to get better matches.</div>
+                <div className="text-muted">
+                  No matches yet. Add more skills to get better matches (use the Skills page in the top nav).
+                </div>
               ) : (
                 <ul className="list-group list-group-flush">
                   {data.map(job => (
@@ -139,7 +136,12 @@ const Dashboard = () => {
                           <div className="fw-semibold">{job.job_title}</div>
                           <small className="text-muted">{job.job_description}</small>
                         </div>
-                        <span className="badge text-bg-primary ms-3">Job #{job.job_post_id}</span>
+                        <Link
+                          to={`/job-posts/${job.job_post_id}`}
+                          className="badge text-bg-primary ms-3 text-decoration-none"
+                        >
+                          Job #{job.job_post_id}
+                        </Link>
                       </div>
                     </li>
                   ))}
@@ -166,7 +168,12 @@ const Dashboard = () => {
                           <div className="fw-semibold">{job.job_title}</div>
                           <small className="text-muted">{job.job_description}</small>
                         </div>
-                        <span className="badge text-bg-secondary ms-3">#{job.job_post_id}</span>
+                        <Link
+                          to={`/job-posts/${job.job_post_id}`}
+                          className="badge text-bg-secondary ms-3 text-decoration-none"
+                        >
+                          #{job.job_post_id}
+                        </Link>
                       </div>
                     </li>
                   ))}
