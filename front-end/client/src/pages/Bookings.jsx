@@ -1,77 +1,112 @@
+// src/pages/Bookings.jsx
 import React, { useEffect, useState } from 'react';
 import axios from '../utils/axios';
+import { Link } from 'react-router-dom';
 
-const Bookings = () => {
-  const [user, setUser] = useState(null);
-  const [jobPosts, setJobPosts] = useState([]);
-  const [bookings, setBookings] = useState([]);
-  const [selectedJob, setSelectedJob] = useState('');
-  const [bookingDate, setBookingDate] = useState('');
+export default function Bookings() {
+  const [me, setMe] = useState(null);
+  const [mine, setMine] = useState([]);          // bookings I requested (as contractor)
+  const [forMyJobs, setForMyJobs] = useState([]); // requests on my jobs (as client)
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      const res = await axios.get('/users/me');
-      setUser(res.data);
+    (async () => {
+      const { data } = await axios.get('/users/me');
+      setMe(data);
 
-      const jobs = await axios.get('/job-posts');
-      const userJobs = jobs.data.filter(j => j.user_id === res.data.user_id);
-      setJobPosts(userJobs);
-
-      const allBookings = await axios.get('/bookings');
-      const myBookings = allBookings.data.filter(b => b.user_id === res.data.user_id);
-      setBookings(myBookings);
-    };
-    fetchUserData();
+      const a = await axios.get('/bookings/mine');
+      const b = await axios.get('/bookings/for-my-jobs');
+      setMine(a.data || []);
+      setForMyJobs(b.data || []);
+    })();
   }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!selectedJob || !bookingDate) return alert('Fill all fields');
-
+  const setStatus = async (id, status) => {
+    setBusy(true);
     try {
-      await axios.post('/bookings', {
-        user_id: user.user_id,
-        job_post_id: selectedJob,
-        booking_date: bookingDate,
-        status: 0,
-      });
-      alert('Booking created!');
-      window.location.reload();
-    } catch {
-      alert('Failed to create booking');
+      await axios.patch(`/bookings/${id}/status`, { status });
+      const b = await axios.get('/bookings/for-my-jobs');
+      setForMyJobs(b.data || []);
+    } catch (e) {
+      console.error(e);
+      alert(e.response?.data?.message || 'Failed to update');
+    } finally {
+      setBusy(false);
     }
   };
 
-  return (
-    <div className="container mt-5">
-      <h2>Book a Job</h2>
-      <form onSubmit={handleSubmit} className="row g-3">
-        <div className="col-md-6">
-          <select className="form-select" value={selectedJob} onChange={e => setSelectedJob(e.target.value)} required>
-            <option value="">Select Job</option>
-            {jobPosts.map(job => (
-              <option key={job.job_post_id} value={job.job_post_id}>{job.job_title}</option>
-            ))}
-          </select>
-        </div>
-        <div className="col-md-6">
-          <input className="form-control" type="date" value={bookingDate} onChange={e => setBookingDate(e.target.value)} required />
-        </div>
-        <div className="col-12">
-          <button className="btn btn-success" type="submit">Book</button>
-        </div>
-      </form>
+  if (!me) return <div className="container py-4">Loading…</div>;
 
-      <h4 className="mt-4">Your Bookings</h4>
-      <ul className="list-group">
-        {bookings.map(b => (
-          <li key={b.booking_id} className="list-group-item">
-            Job #{b.job_post_id} on {b.booking_date} — <strong>Status:</strong> {b.status}
-          </li>
-        ))}
-      </ul>
+  return (
+    <div className="container py-4">
+      <h2 className="mb-4">Bookings</h2>
+
+      {/* Contractor list */}
+      <div className="mb-5">
+        <h5>My booking requests</h5>
+        {mine.length === 0 ? (
+          <div className="text-muted">No requests yet.</div>
+        ) : (
+          <ul className="list-group">
+            {mine.map(b => (
+              <li key={b.booking_id} className="list-group-item d-flex justify-content-between">
+                <div>
+                  <div className="fw-semibold">{b.job_title}</div>
+                  <div className="small text-muted">
+                    with{' '}
+                    <Link to={`/users/${b.client_id}`} className="text-decoration-none">
+                      {b.client_display_name?.trim() || b.client_username}
+                    </Link>{' '}
+                    on {new Date(b.booking_date).toLocaleDateString()} — <strong>Status:</strong> {b.status}
+                  </div>
+                </div>
+                <span className="badge text-bg-secondary">#{b.booking_id}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Client list */}
+      <div>
+        <h5>Requests for my jobs</h5>
+        {forMyJobs.length === 0 ? (
+          <div className="text-muted">No requests yet.</div>
+        ) : (
+          <ul className="list-group">
+            {forMyJobs.map(b => (
+              <li key={b.booking_id} className="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                  <div className="fw-semibold">{b.job_title}</div>
+                  <div className="small text-muted">
+                    By{' '}
+                    <Link to={`/users/${b.contractor_id}`} className="text-decoration-none">
+                      {b.contractor_display_name?.trim() || b.contractor_name || b.contractor_username}
+                    </Link>{' '}
+                    on {new Date(b.booking_date).toLocaleDateString()} — {b.status}
+                  </div>
+                </div>
+                <div className="d-flex gap-2">
+                  <button
+                    className="btn btn-sm btn-outline-success"
+                    disabled={busy || b.status !== 'pending'}
+                    onClick={() => setStatus(b.booking_id, 1)}
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    className="btn btn-sm btn-outline-danger"
+                    disabled={busy || b.status !== 'pending'}
+                    onClick={() => setStatus(b.booking_id, 2)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
-};
-
-export default Bookings;
+}
