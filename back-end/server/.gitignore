@@ -2,7 +2,7 @@
 node_modules/
 
 # Environment files
-.env
+**/.env
 
 # Logs
 npm-debug.log*
@@ -17,6 +17,7 @@ logs/
 # VS Code settings & history
 .vscode/
 .history/
+**/.history/
 
 # Build output
 dist/

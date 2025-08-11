@@ -1,31 +1,38 @@
 const express = require('express');
 const app = express();
-//const cors = require('cors');
-//const bodyParser = require('body-parser');
+const cors = require('cors');
+const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
+const path = require('path');   
 dotenv.config();
 
 const port = process.env.PORT || 8190;
-const db = require('./config/db'); 
 
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
-// ==== Middleware ====
-//app.use(cors());
-//app.use(bodyParser.json());
+const jobPostRoutes = require('./routes/jobPosts'); 
+const bookingRoutes = require('./routes/bookings');
+const skillRoutes = require('./routes/skills');
+const ratingRoutes = require('./routes/ratings'); 
+const photoRoutes = require('./routes/photos');
+const adminRoutes = require('./routes/admin')
+const db = require('./config/db'); 
 
-// ==== Routes ====
+app.use(cors());
+app.use(bodyParser.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-app.get('/', (req, res) => {
-  res.send('Contractor Booking System API Running!');
-});
-
-// Auth routes
+//Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/job-posts', jobPostRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/skills', skillRoutes);
+app.use('/api/ratings', ratingRoutes);
+app.use('/api/photos', photoRoutes);
+app.use('/api/admin', adminRoutes);
 
-
-
-// ==== Test DB Route ====
+//Test DB Route 
 app.get('/api/test-db', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT 1 + 1 AS result');
@@ -36,7 +43,7 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
-// ==== Start Server ====
+//Start Server
 app.listen(port, () => {
-  console.log(`🚀 Server running at http://localhost:${port}`);
+  console.log(`Server running at http://localhost:${port}`);
 });
