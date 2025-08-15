@@ -44,7 +44,9 @@ export default function MainNav() {
           <li className="nav-item"><NavLink to="/job-posts" className={linkClass}>Job Posts</NavLink></li>
           <li className="nav-item"><NavLink to="/bookings" className={linkClass}>Bookings</NavLink></li>
           <li className="nav-item"><NavLink to="/ratings" className={linkClass}>Ratings</NavLink></li>
-          <li className="nav-item"><NavLink to="/skills" className={linkClass}>Skills</NavLink></li>
+          {(me?.role === 'admin' || me?.role === 'contractor') && (
+           <li className="nav-item"><NavLink to="/skills" className={linkClass}>Skills</NavLink></li>
+          )}
           {me?.role === 'admin' && (
             <li className="nav-item"><NavLink to="/admin" className={linkClass}>Admin</NavLink></li>
           )}

@@ -33,6 +33,7 @@ app.use('/api/skills', skillRoutes);
 app.use('/api/ratings', ratingRoutes);
 app.use('/api/photos', photoRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/uploads/profile_picture',
   express.static(path.join(__dirname, 'uploads/profile_picture')));
 app.use('/uploads/profile_pictures',

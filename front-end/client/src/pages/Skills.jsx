@@ -1,21 +1,18 @@
-// src/pages/Skills.jsx
 import React, { useEffect, useState } from 'react';
 import axios from '../utils/axios';
 
 export default function Skills() {
   const [user, setUser] = useState(null);
 
-  // catalog + add form
   const [skills, setSkills] = useState([]);
   const [selectedSkill, setSelectedSkill] = useState('');
   const [proficiency, setProficiency] = useState('Beginner');
   const [experience, setExperience] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // my skills (editable)
   const [mySkills, setMySkills] = useState([]);
   const [loadingMine, setLoadingMine] = useState(true);
-  const [savingRow, setSavingRow] = useState({}); // { [skill_id]: true|false }
+  const [savingRow, setSavingRow] = useState({}); 
 
   useEffect(() => {
     (async () => {
@@ -62,7 +59,6 @@ export default function Skills() {
         proficiency_level: proficiency,
         years_experience: Math.max(0, parseInt(experience, 10) || 0),
       });
-      // reset form + refresh my skills
       setSelectedSkill('');
       setProficiency('Beginner');
       setExperience('');
@@ -77,7 +73,6 @@ export default function Skills() {
   };
 
   const updateYears = async (skill_id, value) => {
-    // client clamp; server also clamps 0..60
     const years =
       value === '' || value === null
         ? null
@@ -92,7 +87,6 @@ export default function Skills() {
     } catch (e) {
       console.error(e);
       alert(e.response?.data?.message || 'Failed to update experience');
-      // reload to restore correct values
       await loadMine();
     } finally {
       setSavingRow((m) => ({ ...m, [skill_id]: false }));
@@ -109,7 +103,6 @@ export default function Skills() {
       </div>
 
       <div className="row g-4">
-        {/* Add Skill */}
         <div className="col-lg-6">
           <div className="card shadow-sm">
             <div className="card-body">
@@ -174,7 +167,6 @@ export default function Skills() {
           </div>
         </div>
 
-        {/* My Skills (editable years) */}
         <div className="col-lg-6">
           <div className="card shadow-sm">
             <div className="card-body">

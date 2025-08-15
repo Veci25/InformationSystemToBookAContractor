@@ -79,16 +79,17 @@ exports.updateJobPost = async (req, res) => {
     const { id } = req.params;
     const userId = req.user?.id;
     const role = req.user?.role;
+    const isAdmin = role = 'admin';
 
     if (!userId) return res.status(401).json({ message: 'Auth required' });
-    if (role !== 'client') return res.status(403).json({ message: 'Clients only' });
+    if (!isAdmin && role !== 'client') return res.status(403).json({ message: 'Clients only' });
 
     const [rows] = await db.query(
       'SELECT user_id FROM job_posts WHERE job_post_id = ?',
       [id]
     );
     if (!rows.length) return res.status(404).json({ message: 'Job post not found' });
-    if (rows[0].user_id !== userId) {
+    if (!isAdmin && rows[0].user_id !== userId) {
       return res.status(403).json({ message: 'Not your job post' });
     }
     const { job_title, job_description, job_price, job_deadline } = req.body;
@@ -151,33 +152,23 @@ exports.deleteJobPost = async (req, res) => {
     const { id } = req.params;
     const userId = req.user?.id;
     const role = req.user?.role;
+    const isAdmin = role === 'admin';
 
     if (!userId) return res.status(401).json({ message: 'Auth required' });
-    if (role !== 'client') return res.status(403).json({ message: 'Clients only' });
+    if (!isAdmin && role !== 'client') return res.status(403).json({ message: 'Clients only' });
 
-    const [rows] = await db.query(
-      'SELECT user_id FROM job_posts WHERE job_post_id = ?',
-      [id]
-    );
+    const [rows] = await db.query('SELECT user_id FROM job_posts WHERE job_post_id = ?', [id]);
     if (!rows.length) return res.status(404).json({ message: 'Job post not found' });
-    if (rows[0].user_id !== userId) {
-      return res.status(403).json({ message: 'Not your job post' });
-    }
+    if (!isAdmin && rows[0].user_id !== userId) return res.status(403).json({ message: 'Not your job post' });
 
     await db.query('DELETE FROM job_skills WHERE job_post_id = ?', [id]);
     await db.query('DELETE FROM bookings WHERE job_post_id = ?', [id]);
+    const [result] = await db.query('DELETE FROM job_posts WHERE job_post_id = ?', [id]);
 
-    const [result] = await db.query(
-      'DELETE FROM job_posts WHERE job_post_id = ? AND user_id = ?',
-      [id, userId]
-    );
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'Job post not found' });
-    }
-
+    if (!result.affectedRows) return res.status(404).json({ message: 'Job post not found' });
     return res.json({ message: 'Job post deleted successfully' });
-  } catch (error) {
-    console.error('deleteJobPost error:', error);
+  } catch (e) {
+    console.error('deleteJobPost error:', e);
     res.status(500).json({ message: 'Server error' });
   }
 };

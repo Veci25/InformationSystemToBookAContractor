@@ -1,4 +1,3 @@
-// src/pages/AdminPanel.jsx
 import React, { useEffect, useState } from 'react';
 import axios from '../utils/axios';
 import { Link } from 'react-router-dom';
@@ -11,27 +10,30 @@ export default function AdminPanel() {
   const [ratings, setRatings] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [skills, setSkills] = useState([]);
+  const [jobPosts, setJobPosts] = useState([]);
 
   const [newSkill, setNewSkill] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const [tab, setTab] = useState('overview'); // 'overview' | 'users' | 'ratings' | 'bookings' | 'skills'
+  const [tab, setTab] = useState('overview'); 
 
   const load = async () => {
     setLoading(true);
     try {
-      const [o, u, r, b, s] = await Promise.all([
+      const [o, u, r, b, s, j] = await Promise.all([
         axios.get('/admin/overview'),
         axios.get('/admin/users'),
         axios.get('/admin/ratings'),
-        axios.get('/bookings'),     // admin-only list
+        axios.get('/bookings'),
         axios.get('/skills'),
+        axios.get('/job-posts'),
       ]);
       setOverview(o.data);
       setUsers(u.data || []);
       setRatings(r.data || []);
       setBookings(b.data || []);
       setSkills(s.data || []);
+      setJobPosts(j.data || []);
     } catch (e) {
       console.error(e);
       alert(e.response?.data?.message || 'Failed to load admin data');
@@ -42,7 +44,6 @@ export default function AdminPanel() {
 
   useEffect(() => { load(); }, []);
 
-  // Users
   const deleteUser = async (user_id) => {
     if (!confirm(`Delete user #${user_id}? This cannot be undone.`)) return;
     try {
@@ -54,7 +55,6 @@ export default function AdminPanel() {
     }
   };
 
-  // Ratings
   const deleteRating = async (rating_id) => {
     if (!confirm(`Delete rating #${rating_id}?`)) return;
     try {
@@ -66,7 +66,6 @@ export default function AdminPanel() {
     }
   };
 
-  // Bookings
   const setBookingStatus = async (id, statusNum) => {
     if (!confirm('Change booking status?')) return;
     setBusy(true);
@@ -96,7 +95,6 @@ export default function AdminPanel() {
     }
   };
 
-  // Skills
   const addSkill = async (e) => {
     e.preventDefault();
     const name = newSkill.trim();
@@ -129,6 +127,20 @@ export default function AdminPanel() {
     }
   };
 
+  const deleteJobPost = async (id) => {
+    if (!confirm(`Delete job post #${id}? This cannot be undone.`)) return;
+    setBusy(true);
+    try {
+      await axios.delete(`/job-posts/${id}`);
+      setJobPosts(ps => ps.filter(p => p.job_post_id !== id));
+    } catch (e) {
+      console.error(e);
+      alert(e.response?.data?.message || 'Failed to delete job post');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (loading) return <div className="container py-4">Loading…</div>;
 
   return (
@@ -141,6 +153,7 @@ export default function AdminPanel() {
           <button className={`btn btn-sm btn-${tab==='ratings'?'primary':'outline-primary'}`} onClick={() => setTab('ratings')}>Ratings</button>
           <button className={`btn btn-sm btn-${tab==='bookings'?'primary':'outline-primary'}`} onClick={() => setTab('bookings')}>Bookings</button>
           <button className={`btn btn-sm btn-${tab==='skills'?'primary':'outline-primary'}`} onClick={() => setTab('skills')}>Skills</button>
+          <button className={`btn btn-sm btn-${tab==='jobposts'?'primary':'outline-primary'}`} onClick={() => setTab('jobposts')}>Job Posts</button>
         </div>
       </div>
 
@@ -331,6 +344,46 @@ export default function AdminPanel() {
             </div>
           </div>
         </>
+      )}
+
+      {tab === 'jobposts' && (
+        <div className="card shadow-sm">
+          <div className="card-body">
+            <div className="d-flex align-items-center justify-content-between mb-3">
+              <h5 className="card-title mb-0">All Job Posts</h5>
+              <Link to="/job-posts" className="btn btn-sm btn-primary">New Post</Link>
+            </div>
+
+            {jobPosts.length === 0 ? (
+              <div className="text-muted">No job posts.</div>
+            ) : (
+              <div className="table-responsive">
+                <table className="table align-middle">
+                  <thead>
+                    <tr>
+                      <th>ID</th><th>Title</th><th>Client</th><th>Price</th><th>Deadline</th><th style={{width:180}} />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {jobPosts.map(p => (
+                      <tr key={p.job_post_id}>
+                        <td>#{p.job_post_id}</td>
+                        <td>{p.job_title}</td>
+                        <td>{p.user_id ? `User #${p.user_id}` : '—'}</td>
+                        <td>{p.job_price != null && p.job_price !== '' ? `$${Number(p.job_price).toFixed(2)}` : '—'}</td>
+                        <td>{p.job_deadline ? new Date(p.job_deadline).toLocaleDateString() : '—'}</td>
+                        <td className="text-end">
+                          <Link to={`/job-posts/${p.job_post_id}`} className="btn btn-sm btn-outline-secondary me-2">View</Link>
+                          <button className="btn btn-sm btn-outline-danger" disabled={busy} onClick={() => deleteJobPost(p.job_post_id)}>Delete</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

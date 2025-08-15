@@ -1,4 +1,3 @@
-// src/pages/JobPosts.jsx
 import React, { useEffect, useState } from 'react';
 import axios from '../utils/axios';
 import { Link, useNavigate } from 'react-router-dom';
@@ -11,7 +10,6 @@ export default function JobPosts() {
   const [loadingUser, setLoadingUser] = useState(true);
   const [loadingPosts, setLoadingPosts] = useState(true);
 
-  // for client create flow
   const [allSkills, setAllSkills] = useState([]);
   const [selectedSkillIds, setSelectedSkillIds] = useState([]);
 
@@ -25,12 +23,10 @@ export default function JobPosts() {
 
   const navigate = useNavigate();
 
-  // Redirect if completely unauthenticated
   useEffect(() => {
     if (!localStorage.getItem('token')) navigate('/login');
   }, [navigate]);
 
-  // Load me
   useEffect(() => {
     (async () => {
       try {
@@ -45,7 +41,6 @@ export default function JobPosts() {
     })();
   }, [navigate]);
 
-  // Load posts depending on role
   const loadPosts = async (u) => {
     setLoadingPosts(true);
     try {
@@ -53,8 +48,7 @@ export default function JobPosts() {
       const list =
         u?.role === 'client'
           ? (res.data || []).filter((p) => p.user_id === u.user_id)
-          : (res.data || []); // contractors see ALL
-      // sort newest first (or by deadline; tweak as you like)
+          : (res.data || []); // admins & contractors see ALL
       list.sort((a, b) => Number(b.job_post_id) - Number(a.job_post_id));
       setPosts(list);
     } catch (e) {
@@ -68,9 +62,9 @@ export default function JobPosts() {
     if (user) loadPosts(user);
   }, [user]);
 
-  // Load skills only for client UI
   useEffect(() => {
-    if (user?.role !== 'client') return;
+    const canCreate = user?.role === 'client' || user?.role === 'admin';
+    if (!canCreate) return;
     (async () => {
       try {
         const res = await axios.get('/skills');
@@ -81,7 +75,6 @@ export default function JobPosts() {
     })();
   }, [user]);
 
-  // --- Client create helpers ---
   const handleChange = (e) =>
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
@@ -92,11 +85,11 @@ export default function JobPosts() {
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (user?.role !== 'client') return;
+    const canCreate = user?.role === 'client' || user?.role === 'admin';
+    if (!canCreate) return;
 
     setSaving(true);
     try {
-      // 1) create job post
       const createRes = await axios.post('/job-posts', {
         ...form,
         user_id: user.user_id,
@@ -107,14 +100,12 @@ export default function JobPosts() {
         createRes.data?.id ||
         createRes.data?.insertId;
 
-      // fallback: reload and pick newest of my posts
       if (!jobId) {
         const res = await axios.get('/job-posts');
         const mine = (res.data || []).filter((p) => p.user_id === user.user_id);
         jobId = mine.sort((a, b) => b.job_post_id - a.job_post_id)[0]?.job_post_id;
       }
 
-      // 2) attach selected skills
       if (jobId && selectedSkillIds.length) {
         const calls = selectedSkillIds.map((skill_id) =>
           axios.post(CREATE_JOB_SKILL_PATH, {
@@ -124,10 +115,9 @@ export default function JobPosts() {
             is_mandatory: 1,
           })
         );
-        await Promise.allSettled(calls); // ignore duplicates
+        await Promise.allSettled(calls);
       }
 
-      // 3) reset + reload
       setForm({ job_title: '', job_description: '', job_price: '', job_deadline: '' });
       setSelectedSkillIds([]);
       await loadPosts(user);
@@ -143,7 +133,7 @@ export default function JobPosts() {
   const onDelete = async (id) => {
     if (!confirm('Delete this job post?')) return;
     try {
-      await axios.delete(`/job-posts/${id}`);
+      await axios.delete(`/job-posts/${id}`); // backend allows admin delete
       await loadPosts(user);
     } catch (e) {
       console.error(e);
@@ -151,22 +141,22 @@ export default function JobPosts() {
     }
   };
 
-  // ---- UI ----
   if (loadingUser) {
     return <div className="container py-5 text-muted">Loading…</div>;
   }
 
   const isClient = user?.role === 'client';
+  const isAdmin = user?.role === 'admin';
+  const canCreate = isClient || isAdmin;
+  const canManage = isClient || isAdmin; 
 
   return (
     <div className="container py-4">
       <div className="d-flex align-items-center justify-content-between mb-3">
-        <h2 className="mb-0">{isClient ? 'Create Job Post' : 'Browse Job Posts'}</h2>
-        {!isClient}
+        <h2 className="mb-0">{canCreate ? 'Create Job Post' : 'Browse Job Posts'}</h2>
       </div>
 
-      {/* CLIENT: Create form */}
-      {isClient && (
+      {canCreate && (
         <form onSubmit={handleCreate} className="card p-4 shadow-sm mb-5">
           <div className="mb-3">
             <label className="form-label">Title</label>
@@ -220,7 +210,6 @@ export default function JobPosts() {
             />
           </div>
 
-          {/* Required skills */}
           <div className="mb-4">
             <label className="form-label">Required Skills</label>
             {allSkills.length === 0 ? (
@@ -257,9 +246,7 @@ export default function JobPosts() {
       )}
 
       <div className="d-flex align-items-center justify-content-between mb-2">
-        <h3 className="mb-0">
-          {isClient ? 'Your Job Posts' : 'All Job Posts'}
-        </h3>
+        <h3 className="mb-0">{isClient ? 'Your Job Posts' : 'All Job Posts'}</h3>
       </div>
 
       {loadingPosts ? (
@@ -282,15 +269,16 @@ export default function JobPosts() {
                   </p>
                   <p className="mb-1">
                     <strong>Price:</strong>{' '}
-                    {job.job_price != null ? `$${Number(job.job_price).toFixed(2)}` : '—'}
+                    {job.job_price != null && job.job_price !== ''
+                      ? `$${Number(job.job_price).toFixed(2)}`
+                      : '—'}
                   </p>
                   <p className="mb-2">
                     <strong>Deadline:</strong>{' '}
                     {job.job_deadline ? new Date(job.job_deadline).toLocaleDateString() : '—'}
                   </p>
 
-                  {/* For contractors, show client and quick view */}
-                  {!isClient && (
+                  {user?.role !== 'client' && (
                     <p className="mb-0 small text-muted">
                       Client:{' '}
                       <Link to={`/users/${job.user_id}`} className="text-decoration-none">
@@ -303,14 +291,11 @@ export default function JobPosts() {
                 <div className="card-footer d-flex justify-content-between align-items-center">
                   <span className="badge text-bg-secondary">ID #{job.job_post_id}</span>
                   <div className="d-flex gap-2">
-                    <Link
-                      to={`/job-posts/${job.job_post_id}`}
-                      className="btn btn-sm btn-outline-secondary"
-                    >
+                    <Link to={`/job-posts/${job.job_post_id}`} className="btn btn-sm btn-outline-secondary">
                       View
                     </Link>
 
-                    {isClient && (
+                    {canManage && (
                       <>
                         <button
                           className="btn btn-sm btn-outline-primary"
