@@ -1,65 +1,47 @@
-// src/pages/AccountSettings.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "../utils/axios";
 
 const apiOrigin = (() => {
   try {
-    return new URL(axios.defaults.baseURL).origin;
+    return new URL(axios.defaults.baseURL).origin; 
   } catch {
     return window.location.origin;
   }
 })();
 
-// build a payload with only changed fields
 const buildPayload = (me, { name, surname, username, bio }) => {
   const norm = (v) => (typeof v === "string" ? v.trim() : v);
   const payload = {};
-
-  if (typeof name !== "undefined" && norm(name) !== (me?.name || "")) {
-    payload.name = norm(name);
-  }
-  if (typeof surname !== "undefined" && norm(surname) !== (me?.surname || "")) {
-    payload.surname = norm(surname);
-  }
-  if (typeof username !== "undefined" && norm(username) !== (me?.username || "")) {
-    payload.username = norm(username);
-  }
-  if (typeof bio !== "undefined" && norm(bio ?? "") !== (me?.bio || "")) {
-    payload.bio = norm(bio ?? "");
-  }
+  if (typeof name !== "undefined" && norm(name) !== (me?.name || "")) payload.name = norm(name);
+  if (typeof surname !== "undefined" && norm(surname) !== (me?.surname || "")) payload.surname = norm(surname);
+  if (typeof username !== "undefined" && norm(username) !== (me?.username || "")) payload.username = norm(username);
+  if (typeof bio !== "undefined" && norm(bio ?? "") !== (me?.bio || "")) payload.bio = norm(bio ?? "");
   return payload;
 };
-
 
 const AccountSettings = () => {
   const navigate = useNavigate();
 
   const [me, setMe] = useState(null);
 
-  // photo uploader
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [savingPhoto, setSavingPhoto] = useState(false);
   const [cacheBust, setCacheBust] = useState("");
 
-  // profile details
   const [name, setName] = useState("");
   const [surname, setSurname] = useState("");
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
 
-  // password
   const [currentPw, setCurrentPw] = useState("");
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
   const [savingPw, setSavingPw] = useState(false);
 
-  const pwStrong = useMemo(
-    () => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(newPw),
-    [newPw]
-  );
+  const pwStrong = useMemo(() => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(newPw), [newPw]);
   const pwMismatch = confirmPw.length > 0 && confirmPw !== newPw;
 
   useEffect(() => {
@@ -77,7 +59,6 @@ const AccountSettings = () => {
     })();
   }, []);
 
-  // preview cleanup
   useEffect(() => {
     return () => {
       if (preview) URL.revokeObjectURL(preview);
@@ -96,76 +77,83 @@ const AccountSettings = () => {
     setCacheBust(String(Date.now()));
   };
 
-  const uploadProfilePic = async (e) => {
-    e.preventDefault();
-    if (!file) return alert("Choose an image first.");
-    setSavingPhoto(true);
-    try {
-      const fd = new FormData();
-      fd.append("profile_picture", file);
+const uploadProfilePic = async (e) => {
+  e.preventDefault();
+  if (!file) return alert("Choose an image first.");
+  setSavingPhoto(true);
 
-      const { data } = await axios.put("/users/me/profile-picture", fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+  try {
+    const fd = new FormData();
+    fd.append("profile_picture", file, file.name);
 
-      // Optimistic local update + cache-bust
-      setMe((prev) =>
-        prev
-          ? {
-              ...prev,
-              profile_picture: data.profile_picture ?? prev.profile_picture,
-              profile_picture_url:
-                data.profile_picture_url ?? prev.profile_picture_url,
-            }
-          : prev
-      );
-      setFile(null);
-      setPreview(null);
-      await refreshMe();
-      alert("Profile photo updated!");
-    } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.message || "Failed to update profile photo");
-    } finally {
-      setSavingPhoto(false);
-    }
-  };
+    const { data } = await axios.put("/users/me/profile-picture", fd);
 
-  // only enable Save when something actually changed
+    const filename = data.profile_picture;
+    const rawUrl =
+      data.profile_picture_url ||
+      (filename
+        ? `${apiOrigin}/uploads/profile_picture/${encodeURIComponent(filename)}`
+        : null);
+
+    const freshUrl = rawUrl ? `${rawUrl}${rawUrl.includes("?") ? "&" : "?"}v=${Date.now()}` : null;
+
+    setMe((prev) =>
+      prev
+        ? {
+            ...prev,
+            profile_picture: filename ?? prev.profile_picture,
+            profile_picture_url: freshUrl ?? prev.profile_picture_url,
+          }
+        : prev
+    );
+
+    if (preview) URL.revokeObjectURL(preview);
+    setFile(null);
+    setPreview(null);
+
+    await refreshMe();
+
+    alert("Profile photo updated!");
+  } catch (err) {
+    console.error(err);
+    alert(err.response?.data?.message || "Failed to update profile photo");
+  } finally {
+    setSavingPhoto(false);
+  }
+};
+
   const isDirty = useMemo(() => {
     if (!me) return false;
     const payload = buildPayload(me, { name, surname, username, bio });
     return Object.keys(payload).length > 0;
-    }, [me, name, surname, username, bio]);
+  }, [me, name, surname, username, bio]);
 
-    const saveProfile = async (e) => {
-      e.preventDefault();
-      if (!me) return;
-    
-      // include bio here
-      const payload = buildPayload(me, { name, surname, username, bio });
-      if (Object.keys(payload).length === 0) {
-        alert("Nothing to update.");
-        return;
+  const saveProfile = async (e) => {
+    e.preventDefault();
+    if (!me) return;
+
+    const payload = buildPayload(me, { name, surname, username, bio });
+    if (Object.keys(payload).length === 0) {
+      alert("Nothing to update.");
+      return;
+    }
+
+    setSavingProfile(true);
+    try {
+      await axios.patch("/users/me", payload);
+      await refreshMe();
+      alert("Profile saved");
+    } catch (err) {
+      console.error(err);
+      if (err.response?.status === 409) {
+        alert(err.response?.data?.message || "Username already in use.");
+      } else {
+        alert(err.response?.data?.message || "Could not save changes");
       }
-    
-      setSavingProfile(true);
-      try {
-        await axios.patch("/users/me", payload);
-        await refreshMe();
-        alert("Profile saved");
-      } catch (err) {
-        console.error(err);
-        if (err.response?.status === 409) {
-          alert(err.response?.data?.message || "Username already in use.");
-        } else {
-          alert(err.response?.data?.message || "Could not save changes");
-        }
-      } finally {
-        setSavingProfile(false);
-      }
-    };
-    
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   const changePassword = async (e) => {
     e.preventDefault();
@@ -189,30 +177,27 @@ const AccountSettings = () => {
     }
   };
 
-  // current avatar URL (preview takes precedence)
-  const avatarSrc = useMemo(() => {
-    if (preview) return preview;
-    if (!me) return null;
+const avatarSrc = useMemo(() => {
+  if (preview) return preview;
+  if (!me) return null;
 
-    const base =
-      me.profile_picture_url ||
-      (me.profile_picture
-        ? `${apiOrigin}/uploads/profile_pictures/${encodeURIComponent(
-            me.profile_picture
-          )}`
-        : null);
+  const base =
+    me.profile_picture_url ||
+    (me.profile_picture
+      ? `${apiOrigin}/uploads/profile_picture/${encodeURIComponent(me.profile_picture)}`
+      : null);
 
-    return base ? `${base}${cacheBust ? `?t=${cacheBust}` : ""}` : null;
-  }, [me, preview, cacheBust]);
+  if (!base) return null;
+
+  return `${base}${base.includes("?") ? "&" : "?"}t=${cacheBust}`;
+}, [me, preview, cacheBust]);
 
   return (
     <div className="container my-4">
       <h2 className="mb-4">Account Settings</h2>
 
       <div className="row g-4">
-        {/* LEFT: photo + profile details */}
         <div className="col-lg-8 col-xl-7">
-          {/* PHOTO */}
           <div className="card shadow-sm mb-4">
             <div className="card-body">
               <div className="d-flex justify-content-between align-items-center mb-3">
@@ -244,20 +229,13 @@ const AccountSettings = () => {
                   </div>
                 )}
                 {!preview && !avatarSrc && (
-                  <div className="text-muted small">
-                    Select a new image to preview it here.
-                  </div>
+                  <div className="text-muted small">Select a new image to preview it here.</div>
                 )}
               </div>
 
               <form onSubmit={uploadProfilePic}>
                 <div className="mb-3">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="form-control"
-                    onChange={onFile}
-                  />
+                  <input type="file" accept="image/*" className="form-control" onChange={onFile} />
                 </div>
                 <button className="btn btn-success" disabled={savingPhoto}>
                   {savingPhoto ? "Uploading…" : "Upload Profile Photo"}
@@ -266,34 +244,21 @@ const AccountSettings = () => {
             </div>
           </div>
 
-          {/* PROFILE DETAILS */}
           <div className="card shadow-sm">
             <div className="card-body">
               <h4 className="card-title mb-4">Your Details</h4>
               <form onSubmit={saveProfile} className="row g-3">
                 <div className="col-md-6">
                   <label className="form-label">Name</label>
-                  <input
-                    className="form-control"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
+                  <input className="form-control" value={name} onChange={(e) => setName(e.target.value)} />
                 </div>
                 <div className="col-md-6">
                   <label className="form-label">Surname</label>
-                  <input
-                    className="form-control"
-                    value={surname}
-                    onChange={(e) => setSurname(e.target.value)}
-                  />
+                  <input className="form-control" value={surname} onChange={(e) => setSurname(e.target.value)} />
                 </div>
                 <div className="col-12">
                   <label className="form-label">Username</label>
-                  <input
-                    className="form-control"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                  />
+                  <input className="form-control" value={username} onChange={(e) => setUsername(e.target.value)} />
                 </div>
                 <div className="col-12">
                   <label className="form-label">Bio</label>
@@ -305,7 +270,7 @@ const AccountSettings = () => {
                     onChange={(e) => setBio(e.target.value)}
                     placeholder="Tell people about your skills, experience, and availability…"
                   />
-                  <div className="form-text">{(bio || '').length}/500</div>
+                  <div className="form-text">{(bio || "").length}/500</div>
                 </div>
                 <div className="col-12">
                   <button className="btn btn-primary" disabled={savingProfile || !isDirty}>
@@ -317,7 +282,6 @@ const AccountSettings = () => {
           </div>
         </div>
 
-        {/* RIGHT: info + password */}
         <div className="col-lg-4 col-xl-5">
           <div className="card shadow-sm mb-4">
             <div className="card-body">
@@ -330,7 +294,6 @@ const AccountSettings = () => {
             </div>
           </div>
 
-          {/* CHANGE PASSWORD */}
           <div className="card shadow-sm">
             <div className="card-body">
               <h5 className="card-title mb-3">Change Password</h5>
@@ -367,11 +330,7 @@ const AccountSettings = () => {
                     value={confirmPw}
                     onChange={(e) => setConfirmPw(e.target.value)}
                   />
-                  {pwMismatch && (
-                    <div className="form-text text-danger">
-                      Passwords do not match.
-                    </div>
-                  )}
+                  {pwMismatch && <div className="form-text text-danger">Passwords do not match.</div>}
                 </div>
                 <div className="col-12">
                   <button className="btn btn-outline-primary" disabled={savingPw}>

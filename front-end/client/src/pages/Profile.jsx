@@ -48,7 +48,7 @@ const Profile = () => {
 
   const profilePhoto = useMemo(() => {
     if (!user?.profile_picture) return null;
-    return `${apiOrigin}/uploads/profile_pictures/${user.profile_picture}?v=${user.profile_picture}`;
+    return `${apiOrigin}/uploads/profile_picture/${user.profile_picture}?v=${user.profile_picture}`;
   }, [user]);
   
 

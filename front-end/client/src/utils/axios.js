@@ -1,9 +1,14 @@
 import axios from 'axios';
 
+const API_BASE =
+  (import.meta.env.VITE_API_URL?.replace(/\/$/, '')) || window.location.origin;
+
 const instance = axios.create({
-  baseURL: 'http://localhost:8190/api',
-  headers: { 'Content-Type': 'application/json' },
+  baseURL: `${API_BASE}/api`,
 });
+
+delete instance.defaults.headers.post?.['Content-Type'];
+delete instance.defaults.headers.put?.['Content-Type'];
 
 instance.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
@@ -12,3 +17,5 @@ instance.interceptors.request.use((config) => {
 });
 
 export default instance;
+
+

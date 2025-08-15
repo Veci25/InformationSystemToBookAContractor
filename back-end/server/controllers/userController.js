@@ -1,7 +1,9 @@
+const path = require('path');
+const fs = require('fs');
 const db = require('../config/db');
 const { validateUserData, validateUpdateUserData } = require('../validations/userValidation');
 const bcrypt = require('bcrypt');
-
+const AVATAR_SUBDIR = 'profile_picture';
 
 exports.getAllUsers = async (req, res) => {
   try {
@@ -13,13 +15,16 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
+
 function withProfileUrl(req, row) {
   if (!row) return row;
-  const base = `${req.protocol}://${req.get('host')}`; 
-  row.profile_picture_url = row.profile_picture
-    ? `${base}/uploads/profile_pictures/${encodeURIComponent(row.profile_picture)}`
-    : null;
-  return row;
+  const base = `${req.protocol}://${req.get('host')}`;
+  return {
+    ...row,
+    profile_picture_url: row.profile_picture
+      ? `${base}/uploads/${AVATAR_SUBDIR}/${encodeURIComponent(row.profile_picture)}`
+      : null,
+  };
 }
 
 exports.getUserById = async (req, res) => {
@@ -32,14 +37,6 @@ exports.getUserById = async (req, res) => {
       [id]
     );
     if (!rows.length) return res.status(404).json({ message: 'User not found' });
-
-    const withProfileUrl = (req, row) => ({
-      ...row,
-      profile_picture_url: row.profile_picture
-        ? `${req.protocol}://${req.get('host')}/uploads/profile_pictures/${encodeURIComponent(row.profile_picture)}`
-        : null,
-    });
-
     res.json(withProfileUrl(req, rows[0]));
   } catch (e) {
     console.error(e);
@@ -49,16 +46,8 @@ exports.getUserById = async (req, res) => {
 
 exports.getCurrentUser = async (req, res) => {
   try {
-const [rows] = await db.query(
-      `SELECT user_id,
-              username,
-              name,
-              surname,
-              email,
-              role,
-              age,
-              bio,
-              profile_picture
+    const [rows] = await db.query(
+      `SELECT user_id, username, name, surname, email, role, age, bio, profile_picture
        FROM users
        WHERE user_id = ?`,
       [req.user.id]
@@ -173,24 +162,43 @@ exports.adminDeleteUser = async (req, res) => {
 
 exports.updateProfilePicture = async (req, res) => {
   try {
-    const userId = req.user.id;
-    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+    const rawId = req.user?.id ?? req.user?.user_id;
+    const userId = Number(rawId);
+    if (!Number.isFinite(userId)) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
 
-    await db.query('UPDATE users SET profile_picture = ? WHERE user_id = ?', [
-      req.file.filename,
-      userId,
-    ]);
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
 
-    const url = `${req.protocol}://${req.get('host')}/uploads/profile_pictures/${req.file.filename}`;
+    const [[row]] = await db.query(
+      'SELECT profile_picture FROM users WHERE user_id = ?',
+      [userId]
+    );
 
+    await db.query(
+      'UPDATE users SET profile_picture = ? WHERE user_id = ?',
+      [req.file.filename, userId]
+    );
+
+    if (row?.profile_picture && row.profile_picture !== req.file.filename) {
+      const oldPath = path.join(__dirname, '..', 'uploads', AVATAR_SUBDIR, row.profile_picture);
+      fs.promises.unlink(oldPath).catch((e) => {
+        if (e.code !== 'ENOENT') console.error('unlink old avatar failed:', e);
+      });
+    }
+
+    const url = `${req.protocol}://${req.get('host')}/uploads/${AVATAR_SUBDIR}/${encodeURIComponent(req.file.filename)}`;
     return res.json({
-      message: 'Profile picture updated',
+      message: 'Profile photo updated',
       profile_picture: req.file.filename,
-      profile_picture_url: url,
+      profile_picture_url: url
     });
+
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ message: 'Server error' });
+    console.error('updateProfilePicture error:', e);
+    return res.status(500).json({ message: 'Server error', detail: e?.message || String(e) });
   }
 };
 
@@ -321,14 +329,14 @@ exports.getPublicUser = async (req, res) => {
 
     const base = `${req.protocol}://${req.get('host')}`;
     const profile_picture_url = u.profile_picture
-      ? `${base}/uploads/profile_pictures/${u.profile_picture}` 
+      ? `${base}/uploads/${AVATAR_SUBDIR}/${u.profile_picture}`
       : null;
 
     const photoItems = photos.map(p => ({
       photo_id: p.photo_id,
       caption: p.caption,
       uploaded_at: p.upload_date,
-      url: `${base}/uploads/${p.image_filename}`,
+      url: `${base}/uploads/${AVATAR_SUBDIR}/${p.image_filename}`,
     }));
 
     res.json({
@@ -338,7 +346,7 @@ exports.getPublicUser = async (req, res) => {
       surname: u.surname,
       role: u.role,
       bio: u.bio,
-      profile_picture_url,          
+      profile_picture_url,
       avg_rating: Number(agg?.avg_rating || 0),
       rating_count: Number(agg?.rating_count || 0),
       photos: photoItems,

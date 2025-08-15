@@ -4,13 +4,24 @@ const userController = require('../controllers/userController');
 const { verifyToken, isAdmin } = require('../middleware/authMiddleware');
 const profileUpload = require('../middleware/profileUploadMiddleware');
 
+const uploadAvatar = (req, res, next) => {
+  profileUpload.single('profile_picture')(req, res, (err) => {
+    if (err) {
+      console.error('Multer upload error:', err);
+      return res.status(400).json({ message: err.message || 'Invalid image upload' });
+    }
+    next();
+  });
+};
+
 router.get('/public/:id', userController.getPublicUser);
 
 router.get('/me', verifyToken, userController.getCurrentUser);
+
 router.put(
   '/me/profile-picture',
   verifyToken,
-  profileUpload.single('profile_picture'),
+  uploadAvatar,
   userController.updateProfilePicture
 );
 
